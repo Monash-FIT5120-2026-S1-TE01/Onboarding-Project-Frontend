@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-// ── Mock 详情页数据（后期可替换为真实 API 返回）────────────────────────────
+// ──  详情页数据（后期可替换为真实 API 返回）────────────────────────────
 const MOCK_DETAIL_DATA = {
   cityName: 'Melbourne',
   dateLabel: 'Sun, 15 Mar · 01:54 am',
@@ -56,7 +56,7 @@ const MOCK_DETAIL_DATA = {
   ],
 }
 
-// ── UV 等级主题工具函数 ─────────────────────────────────────────────
+// ── UV 等级主题工具函数 ───
 function getUVTheme(uvi) {
   if (uvi <= 2) {
     return {
