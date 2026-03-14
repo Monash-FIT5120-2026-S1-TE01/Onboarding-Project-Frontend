@@ -27,7 +27,7 @@ export default function NavBar() {
         }}>☀</div>
         <span style={{ fontSize: '17px', fontWeight: 700 }}>
           <span style={{ color: '#1c1917' }}>Sun</span>
-          <span style={{ color: '#f97316' }}>Sense</span>
+          <span style={{ color: '#f97316' }}>Guard</span>
         </span>
       </Link>
 
