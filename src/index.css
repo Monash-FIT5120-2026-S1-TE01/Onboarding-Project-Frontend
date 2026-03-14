@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+
+:root {
+  --orange:       #F97316;
+  --orange-light: #FDBA74;
+  --orange-dark:  #C2410C;
+  --amber:        #F59E0B;
+  --card-bg:      rgba(255, 255, 255, 0.12);
+  --card-bg-dark: rgba(0, 0, 0, 0.18);
+  --card-border:  rgba(255, 255, 255, 0.22);
+  --text-primary: #1a0a00;
+  --text-secondary: #4a2500;
+  --text-muted:   rgba(26, 10, 0, 0.5);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  color: #1a0a00;
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+/* 毛玻璃卡片 */
+.glass-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.glass-card-dark {
+  background: var(--card-bg-dark);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* 橙色主按钮 */
+.btn-primary {
+  background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 22px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.35);
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.5);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Display 字体用于标题 */
+.font-display {
+  font-family: 'Playfair Display', serif;
+}
+
+/* UV 等级颜色 */
+.uv-low      { color: #16a34a; }
+.uv-moderate { color: #d97706; }
+.uv-high     { color: #ea580c; }
+.uv-veryhigh { color: #dc2626; }
+.uv-extreme  { color: #7c3aed; }
+
+/* 页面淡入动画 */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up {
+  animation: fadeUp 0.5s ease forwards;
+}
+.fade-up-delay-1 { animation-delay: 0.1s; opacity: 0; animation-fill-mode: forwards; }
+.fade-up-delay-2 { animation-delay: 0.2s; opacity: 0; animation-fill-mode: forwards; }
+.fade-up-delay-3 { animation-delay: 0.3s; opacity: 0; animation-fill-mode: forwards; }
