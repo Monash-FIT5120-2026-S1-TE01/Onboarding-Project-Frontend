@@ -1,23 +1,65 @@
 import { useState, useEffect, useCallback } from 'react'
 
-// ── 默认预置城市（首次访问）──────────────────────────────────
-const DEFAULT_CITIES = [
-  { id: 'melbourne', name: 'Melbourne', country: 'Australia', lat: -37.8136, lng: 144.9631 },
+// ── 支持的城市白名单 ──────────────────────────────────────────
+const SUPPORTED_CITIES = [
+  { name: 'Melbourne',      timezone: 'Australia/Melbourne', lat: -37.8136, lng: 144.9631 },
+  { name: 'Sydney',         timezone: 'Australia/Sydney',    lat: -33.8688, lng: 151.2093 },
+  { name: 'Brisbane',       timezone: 'Australia/Brisbane',  lat: -27.4698, lng: 153.0251 },
+  { name: 'Perth',          timezone: 'Australia/Perth',     lat: -31.9505, lng: 115.8605 },
+  { name: 'Adelaide',       timezone: 'Australia/Adelaide',  lat: -34.9285, lng: 138.6007 },
+  { name: 'Canberra',       timezone: 'Australia/Sydney',    lat: -35.2809, lng: 149.1300 },
+  { name: 'Hobart',         timezone: 'Australia/Hobart',    lat: -42.8821, lng: 147.3272 },
+  { name: 'Darwin',         timezone: 'Australia/Darwin',    lat: -12.4634, lng: 130.8456 },
+  { name: 'Gold Coast',     timezone: 'Australia/Brisbane',  lat: -28.0167, lng: 153.4000 },
+  { name: 'Newcastle',      timezone: 'Australia/Sydney',    lat: -32.9283, lng: 151.7817 },
+  { name: 'Wollongong',     timezone: 'Australia/Sydney',    lat: -34.4331, lng: 150.8831 },
+  { name: 'Sunshine Coast', timezone: 'Australia/Brisbane',  lat: -26.6500, lng: 153.0667 },
+  { name: 'Geelong',        timezone: 'Australia/Melbourne', lat: -38.1499, lng: 144.3617 },
+  { name: 'Townsville',     timezone: 'Australia/Brisbane',  lat: -19.2590, lng: 146.8169 },
+  { name: 'Cairns',         timezone: 'Australia/Brisbane',  lat: -16.9186, lng: 145.7781 },
+  { name: 'Toowoomba',      timezone: 'Australia/Brisbane',  lat: -27.5598, lng: 151.9507 },
+  { name: 'Ballarat',       timezone: 'Australia/Melbourne', lat: -37.5622, lng: 143.8503 },
+  { name: 'Bendigo',        timezone: 'Australia/Melbourne', lat: -36.7570, lng: 144.2794 },
+  { name: 'Launceston',     timezone: 'Australia/Hobart',    lat: -41.4332, lng: 147.1441 },
+  { name: 'Mackay',         timezone: 'Australia/Brisbane',  lat: -21.1411, lng: 149.1860 },
 ]
 
-// ── Mock UV 数据生成（Commit 4 替换为真实批量 API）────────────
-function getMockUVData(cityName) {
-  const mock = {
-    Melbourne: { uvIndex: 4.45, temperature: 28, weatherLabel: 'Cloudy' },
-    Sydney:    { uvIndex: 6.10, temperature: 32, weatherLabel: 'Clear'  },
-    Adelaide:  { uvIndex: 3.20, temperature: 16, weatherLabel: 'Rain'   },
-    Brisbane:  { uvIndex: 7.80, temperature: 30, weatherLabel: 'Cloudy' },
-    Perth:     { uvIndex: 9.00, temperature: 35, weatherLabel: 'Clear'  },
-    Hobart:    { uvIndex: 2.10, temperature: 14, weatherLabel: 'Cloudy' },
-    Darwin:    { uvIndex: 11.0, temperature: 33, weatherLabel: 'Rain'   },
-    Canberra:  { uvIndex: 5.50, temperature: 22, weatherLabel: 'Cloudy' },
+const DEFAULT_CITIES = [
+  { id: 'melbourne', name: 'Melbourne', timezone: 'Australia/Melbourne', country: 'Australia' },
+]
+
+// ── 真实 API 请求 ─────────────────────────────────────────────
+async function fetchCityUV(cityName, timezone) {
+  const res = await fetch('http://127.0.0.1:8000/update_status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      city_name: cityName.toLowerCase(),
+      timezone: timezone,
+      sun_screen_efficiency: 0.8,
+      skin_type: 3,
+    })
+  })
+  if (!res.ok) throw new Error('API error')
+  const data = await res.json()
+  return {
+    uvIndex:      data.current_uv_index_time?.uv_index ?? 0,
+    temperature:  data.temperature ?? 0,
+    weatherLabel: parseWeatherLabel(data.weather_label),
   }
-  return mock[cityName] ?? { uvIndex: 5.0, temperature: 25, weatherLabel: 'Clear' }
+}
+
+function parseWeatherLabel(raw) {
+  if (!raw) return 'Clear'
+  const r = raw.toLowerCase()
+  if (r.includes('clear'))        return 'Clear'
+  if (r.includes('cloudy'))       return 'Cloudy'
+  if (r.includes('fog'))          return 'Fog'
+  if (r.includes('drizzle'))      return 'Drizzle'
+  if (r.includes('rain'))         return 'Rain'
+  if (r.includes('snow'))         return 'Snow'
+  if (r.includes('thunderstorm')) return 'Thunderstorm'
+  return 'Clear'
 }
 
 // ── 工具函数 ──────────────────────────────────────────────────
@@ -79,62 +121,54 @@ export default function Cities() {
   const [cities, setCities]         = useState(loadCities)
   const [selectedId, setSelectedId] = useState(loadSelectedId)
   const [uvDataMap, setUvDataMap]   = useState({})
+  const [loadingMap, setLoadingMap] = useState({})
   const [query, setQuery]           = useState('')
-  const [results, setResults]       = useState([])
-  const [searching, setSearching]   = useState(false)
-  const [searchErr, setSearchErr]   = useState('')
+  const [dropdown, setDropdown]     = useState([])
   const [deletingId, setDeletingId] = useState(null)
 
+  // 加载各城市真实 UV 数据（循环请求）
   useEffect(() => {
-    const map = {}
-    cities.forEach(c => { map[c.id] = getMockUVData(c.name) })
-    setUvDataMap(map)
+    cities.forEach(async (city) => {
+      setLoadingMap(prev => ({ ...prev, [city.id]: true }))
+      try {
+        const uv = await fetchCityUV(city.name, city.timezone)
+        setUvDataMap(prev => ({ ...prev, [city.id]: uv }))
+      } catch {
+        // 请求失败保持空状态
+      } finally {
+        setLoadingMap(prev => ({ ...prev, [city.id]: false }))
+      }
+    })
   }, [cities])
 
-  const handleSearch = useCallback(async () => {
-    const q = query.trim()
-    if (!q) return
-    setSearching(true)
-    setSearchErr('')
-    setResults([])
-    try {
-      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`
-      const res  = await fetch(url)
-      const json = await res.json()
-      const auResults = (json.results ?? []).filter(r => r.country_code === 'AU')
-      if (!auResults.length) {
-        setSearchErr('No Australian cities found. Try another name.')
-        setSearching(false)
-        return
-      }
-      setResults(auResults.map(r => ({
-        id:      `${r.name.toLowerCase().replace(/\s+/g, '-')}-${r.id}`,
-        name:    r.name,
-        country: r.country ?? 'Australia',
-        state:   r.admin1 ?? '',
-        lat:     r.latitude,
-        lng:     r.longitude,
-      })))
-    } catch {
-      setSearchErr('Search failed. Please check your connection.')
-    } finally {
-      setSearching(false)
+  // 搜索：本地过滤白名单
+  const handleQueryChange = useCallback((e) => {
+    const val = e.target.value
+    setQuery(val)
+    if (!val.trim()) {
+      setDropdown([])
+      return
     }
-  }, [query])
-
-  const handleKeyDown = (e) => { if (e.key === 'Enter') handleSearch() }
+    const filtered = SUPPORTED_CITIES.filter(c =>
+      c.name.toLowerCase().includes(val.toLowerCase())
+    )
+    setDropdown(filtered)
+  }, [])
 
   const handleAdd = useCallback((city) => {
     if (cities.length >= 3) return
-    if (cities.find(c => c.id === city.id)) return
+    const id = city.name.toLowerCase().replace(/\s+/g, '-')
+    if (cities.find(c => c.id === id)) return
     const next = [...cities, {
-      id: city.id, name: city.name,
-      country: city.country, lat: city.lat, lng: city.lng
+      id,
+      name: city.name,
+      timezone: city.timezone,
+      country: 'Australia',
     }]
     setCities(next)
     saveCities(next)
-    setResults([])
     setQuery('')
+    setDropdown([])
   }, [cities])
 
   const handleDelete = useCallback((id) => {
@@ -161,47 +195,31 @@ export default function Cities() {
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', paddingBottom: '40px' }}>
 
-      {/* ── Hero：City.mp4 视频背景 ── */}
+      {/* ── Hero ── */}
       <div style={{
-        position: 'relative',
-        height: '200px',
+        position: 'relative', height: '200px',
         overflow: 'hidden',
         borderBottom: '1px solid rgba(255,255,255,0.2)',
         boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
       }}>
-
-        {/* 背景视频 */}
-        <video
-          autoPlay muted loop playsInline
-          style={{
-            position: 'absolute',
-            top: 0, left: 0,
-            width: '100%', height: '100%',
-            objectFit: 'cover',
-            objectPosition: 'center 70%',
-            zIndex: 0,
-            pointerEvents: 'none',
-          }}
-        >
+        <video autoPlay muted loop playsInline style={{
+          position: 'absolute', top: 0, left: 0,
+          width: '100%', height: '100%',
+          objectFit: 'cover', objectPosition: 'center 70%',
+          zIndex: 0, pointerEvents: 'none',
+        }}>
           <source src="/videos/City.mp4" type="video/mp4" />
         </video>
-
-        {/* 深色遮罩 */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 1,
-          background: 'rgba(26, 5, 0, 0.50)',
-          pointerEvents: 'none',
+          background: 'rgba(26, 5, 0, 0.50)', pointerEvents: 'none',
         }} />
-
-        {/* 底部渐变过渡 */}
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
           height: '60px', zIndex: 2,
           background: 'linear-gradient(transparent, rgba(0,0,0,0.2))',
           pointerEvents: 'none',
         }} />
-
-        {/* 内容层 */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 3,
           display: 'flex', alignItems: 'flex-end',
@@ -209,20 +227,11 @@ export default function Cities() {
         }}>
           <div style={{ maxWidth: '680px', margin: '0 auto', width: '100%' }}>
             <h1 style={{
-              color: '#fff',
-              fontSize: '28px',
-              fontWeight: 700,
-              fontFamily: 'Georgia, serif',
-              marginBottom: '6px',
+              color: '#fff', fontSize: '28px', fontWeight: 700,
+              fontFamily: 'Georgia, serif', marginBottom: '6px',
               textShadow: '0 2px 8px rgba(0,0,0,0.4)',
-            }}>
-              My Cities
-            </h1>
-            <p style={{
-              color: 'rgba(255,255,255,0.65)',
-              fontSize: '13px',
-              textShadow: '0 1px 4px rgba(0,0,0,0.3)',
-            }}>
+            }}>My Cities</h1>
+            <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '13px', textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
               Track UV levels across up to 3 locations
             </p>
           </div>
@@ -234,17 +243,16 @@ export default function Cities() {
         padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '16px'
       }}>
 
-        {/* ── 搜索框 ── */}
+        {/* ── 搜索框（本地下拉）── */}
         <div style={{
           background: '#fff', borderRadius: '20px', padding: '16px 20px',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f3f4f6'
+          boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f3f4f6',
+          position: 'relative',
         }}>
           <p style={{
             fontSize: '11px', fontWeight: 600, color: '#9ca3af',
             letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '12px'
-          }}>
-            🔍 SEARCH CITY
-          </p>
+          }}>🔍 SEARCH CITY</p>
 
           {isFull && (
             <div style={{
@@ -256,75 +264,69 @@ export default function Cities() {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="e.g. Sydney, Brisbane..."
-              disabled={isFull}
-              style={{
-                flex: 1, padding: '10px 14px',
-                border: '1.5px solid #e5e7eb', borderRadius: '12px',
-                fontSize: '14px', color: '#1c1917', outline: 'none',
-                background: isFull ? '#f9fafb' : '#fff',
-                transition: 'border-color 0.2s'
-              }}
-              onFocus={e => e.target.style.borderColor = '#f97316'}
-              onBlur={e => e.target.style.borderColor = '#e5e7eb'}
-            />
-            <button
-              onClick={handleSearch}
-              disabled={isFull || searching}
-              style={{
-                padding: '10px 20px', borderRadius: '12px',
-                background: isFull ? '#e5e7eb' : 'linear-gradient(135deg, #f97316, #c2410c)',
-                color: isFull ? '#9ca3af' : '#fff',
-                border: 'none', fontWeight: 600, fontSize: '14px',
-                cursor: isFull ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s', whiteSpace: 'nowrap'
-              }}>
-              {searching ? '...' : 'Search'}
-            </button>
-          </div>
+          <input
+            value={query}
+            onChange={handleQueryChange}
+            placeholder={isFull ? 'Remove a city to add another' : 'e.g. Sydney, Brisbane...'}
+            disabled={isFull}
+            style={{
+              width: '100%', padding: '10px 14px',
+              border: '1.5px solid #e5e7eb', borderRadius: '12px',
+              fontSize: '14px', color: '#1c1917', outline: 'none',
+              background: isFull ? '#f9fafb' : '#fff',
+              transition: 'border-color 0.2s',
+              boxSizing: 'border-box',
+            }}
+            onFocus={e => e.target.style.borderColor = '#f97316'}
+            onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+          />
 
-          {searchErr && (
-            <p style={{ fontSize: '13px', color: '#dc2626', marginTop: '10px' }}>{searchErr}</p>
-          )}
-
-          {results.length > 0 && (
-            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {results.map(r => {
-                const already = !!cities.find(c => c.id === r.id)
+          {/* 下拉结果 */}
+          {dropdown.length > 0 && !isFull && (
+            <div style={{
+              position: 'absolute', left: '20px', right: '20px',
+              top: 'calc(100% - 8px)',
+              background: '#fff', borderRadius: '12px',
+              border: '1px solid #f3f4f6',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              zIndex: 100, overflow: 'hidden',
+            }}>
+              {dropdown.map(city => {
+                const id = city.name.toLowerCase().replace(/\s+/g, '-')
+                const already = !!cities.find(c => c.id === id)
                 return (
-                  <div key={r.id} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '10px 14px', borderRadius: '12px',
-                    background: '#f9fafb', border: '1px solid #f3f4f6'
-                  }}>
+                  <div
+                    key={city.name}
+                    onClick={() => !already && handleAdd(city)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '11px 16px',
+                      cursor: already ? 'default' : 'pointer',
+                      background: '#fff',
+                      borderBottom: '1px solid #f9fafb',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => { if (!already) e.currentTarget.style.background = '#fff7ed' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#fff' }}
+                  >
                     <div>
-                      <p style={{ fontSize: '14px', fontWeight: 600, color: '#1c1917' }}>{r.name}</p>
-                      <p style={{ fontSize: '12px', color: '#9ca3af' }}>
-                        {r.state ? `${r.state}, ` : ''}{r.country}
-                      </p>
+                      <p style={{ fontSize: '14px', fontWeight: 600, color: '#1c1917', margin: 0 }}>{city.name}</p>
+                      <p style={{ fontSize: '11px', color: '#9ca3af', margin: '2px 0 0' }}>Australia · {city.timezone}</p>
                     </div>
-                    <button
-                      onClick={() => handleAdd(r)}
-                      disabled={already || isFull}
-                      style={{
-                        padding: '6px 14px', borderRadius: '8px',
-                        fontSize: '12px', fontWeight: 600, border: 'none',
-                        cursor: already || isFull ? 'default' : 'pointer',
-                        background: already ? '#f0fdf4' : isFull ? '#f3f4f6' : 'linear-gradient(135deg, #f97316, #c2410c)',
-                        color: already ? '#16a34a' : isFull ? '#9ca3af' : '#fff',
-                        transition: 'all 0.2s'
-                      }}>
-                      {already ? '✓ Added' : '+ Add'}
-                    </button>
+                    {already
+                      ? <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600 }}>✓ Added</span>
+                      : <span style={{ fontSize: '11px', color: '#f97316', fontWeight: 600 }}>+ Add</span>
+                    }
                   </div>
                 )
               })}
             </div>
+          )}
+
+          {query.trim() && dropdown.length === 0 && !isFull && (
+            <p style={{ fontSize: '13px', color: '#9ca3af', marginTop: '10px' }}>
+              No matching cities found.
+            </p>
           )}
         </div>
 
@@ -338,14 +340,13 @@ export default function Cities() {
             }}>
               <p style={{ fontSize: '32px', marginBottom: '12px' }}>🏙️</p>
               <p style={{ fontSize: '15px', color: '#6b7280', fontWeight: 500 }}>No cities added yet</p>
-              <p style={{ fontSize: '13px', color: '#9ca3af', marginTop: '4px' }}>
-                Search above to add your first city
-              </p>
+              <p style={{ fontSize: '13px', color: '#9ca3af', marginTop: '4px' }}>Search above to add your first city</p>
             </div>
           )}
 
           {cities.map(city => {
             const uv       = uvDataMap[city.id]
+            const loading  = loadingMap[city.id]
             const theme    = uv ? getUVTheme(uv.uvIndex) : null
             const icon     = uv ? getWeatherIcon(uv.weatherLabel) : '🌤️'
             const desc     = uv ? getWeatherDesc(uv.weatherLabel) : ''
@@ -359,11 +360,8 @@ export default function Cities() {
                 style={{
                   background: '#fff', borderRadius: '20px',
                   border: active ? '2px solid #f97316' : '1px solid #f3f4f6',
-                  boxShadow: active
-                    ? '0 4px 20px rgba(249,115,22,0.15)'
-                    : '0 2px 12px rgba(0,0,0,0.06)',
-                  padding: '16px 20px',
-                  cursor: 'pointer',
+                  boxShadow: active ? '0 4px 20px rgba(249,115,22,0.15)' : '0 2px 12px rgba(0,0,0,0.06)',
+                  padding: '16px 20px', cursor: 'pointer',
                   transition: 'all 0.28s ease',
                   opacity: deleting ? 0 : 1,
                   transform: deleting ? 'translateX(40px)' : 'none',
@@ -379,7 +377,9 @@ export default function Cities() {
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <span style={{ fontSize: '32px', lineHeight: 1 }}>{icon}</span>
+                    <span style={{ fontSize: '32px', lineHeight: 1 }}>
+                      {loading ? '⏳' : icon}
+                    </span>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <p style={{ fontSize: '17px', fontWeight: 700, color: '#1c1917' }}>{city.name}</p>
@@ -392,24 +392,26 @@ export default function Cities() {
                         )}
                       </div>
                       <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>{city.country}</p>
-                      {uv && (
+                      {uv && !loading && (
                         <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>
                           {uv.temperature}° · {desc}
                         </p>
+                      )}
+                      {loading && (
+                        <p style={{ fontSize: '12px', color: '#d1d5db', marginTop: '4px' }}>Loading...</p>
                       )}
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    {uv && theme && (
+                    {uv && theme && !loading && (
                       <div style={{
                         textAlign: 'right', display: 'flex', flexDirection: 'column',
                         alignItems: 'flex-end', justifyContent: 'center', gap: '2px'
                       }}>
-                        <p style={{
-                          fontSize: '10px', color: '#9ca3af',
-                          textTransform: 'uppercase', letterSpacing: '0.06em'
-                        }}>UV INDEX</p>
+                        <p style={{ fontSize: '10px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          UV INDEX
+                        </p>
                         <p style={{ fontSize: '26px', fontWeight: 700, color: theme.color, lineHeight: 1 }}>
                           {uv.uvIndex.toFixed(1)}
                         </p>
@@ -448,7 +450,7 @@ export default function Cities() {
         )}
 
         {/* ── 提示卡片 ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px' }}>
+        <div style={{ marginTop: '8px' }}>
           <div style={{
             borderRadius: '16px', padding: '16px 20px',
             background: '#fffbeb', border: '1px solid #fde68a',

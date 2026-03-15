@@ -1,15 +1,47 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 
-// ── Mock 数据（Commit 4 替换为真实 API）──────────────────────
-const MOCK_DATA = {
-  cityName: 'Melbourne',
-  temperature: 28,
-  weatherCode: 1,
-  uvIndex: 4.45,
-  safeSunTime: 80,
-  spf: 30,
-  spfSuggestion: 'Broad-spectrum sunscreen is preferred.',
-  weatherLabel: 'Cloudy',
+// ── 城市白名单（用于获取 timezone）────────────────────────────
+const SUPPORTED_CITIES = [
+  { name: 'Melbourne',      timezone: 'Australia/Melbourne' },
+  { name: 'Sydney',         timezone: 'Australia/Sydney'    },
+  { name: 'Brisbane',       timezone: 'Australia/Brisbane'  },
+  { name: 'Perth',          timezone: 'Australia/Perth'     },
+  { name: 'Adelaide',       timezone: 'Australia/Adelaide'  },
+  { name: 'Canberra',       timezone: 'Australia/Sydney'    },
+  { name: 'Hobart',         timezone: 'Australia/Hobart'    },
+  { name: 'Darwin',         timezone: 'Australia/Darwin'    },
+  { name: 'Gold Coast',     timezone: 'Australia/Brisbane'  },
+  { name: 'Newcastle',      timezone: 'Australia/Sydney'    },
+  { name: 'Wollongong',     timezone: 'Australia/Sydney'    },
+  { name: 'Sunshine Coast', timezone: 'Australia/Brisbane'  },
+  { name: 'Geelong',        timezone: 'Australia/Melbourne' },
+  { name: 'Townsville',     timezone: 'Australia/Brisbane'  },
+  { name: 'Cairns',         timezone: 'Australia/Brisbane'  },
+  { name: 'Toowoomba',      timezone: 'Australia/Brisbane'  },
+  { name: 'Ballarat',       timezone: 'Australia/Melbourne' },
+  { name: 'Bendigo',        timezone: 'Australia/Melbourne' },
+  { name: 'Launceston',     timezone: 'Australia/Hobart'    },
+  { name: 'Mackay',         timezone: 'Australia/Brisbane'  },
+]
+
+function getTimezone(cityName) {
+  const found = SUPPORTED_CITIES.find(
+    c => c.name.toLowerCase() === cityName.toLowerCase()
+  )
+  return found?.timezone ?? 'Australia/Sydney'
+}
+
+function parseWeatherLabel(raw) {
+  if (!raw) return 'Clear'
+  const r = raw.toLowerCase()
+  if (r.includes('clear'))        return 'Clear'
+  if (r.includes('cloudy'))       return 'Cloudy'
+  if (r.includes('fog'))          return 'Fog'
+  if (r.includes('drizzle'))      return 'Drizzle'
+  if (r.includes('rain'))         return 'Rain'
+  if (r.includes('snow'))         return 'Snow'
+  if (r.includes('thunderstorm')) return 'Thunderstorm'
+  return 'Clear'
 }
 
 // ── 天气视频映射 ──────────────────────────────────────────────
@@ -98,21 +130,66 @@ const UNIVERSAL_TIPS = [
 
 // ── 主组件 ────────────────────────────────────────────────────
 export default function Home() {
-  const [data] = useState(MOCK_DATA)
-  const [now, setNow] = useState(new Date())
+  const [data, setData]   = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [now, setNow]     = useState(new Date())
   const [lastApplied, setLastApplied] = useState(() => {
     const s = localStorage.getItem('sunsense_last_applied')
     return s ? parseInt(s) : null
   })
-  const [showBanner, setShowBanner] = useState(false)
+  const [showBanner, setShowBanner]       = useState(false)
   const [showDonePopup, setShowDonePopup] = useState(false)
   const notifiedRef = useRef(false)
 
+  // ── 读取选中城市并请求真实数据 ────────────────────────────
+  useEffect(() => {
+    const cityId  = localStorage.getItem('sunsense_selected_city') ?? 'melbourne'
+    const stored  = localStorage.getItem('sunsense_cities')
+    const cities  = stored ? JSON.parse(stored) : []
+    const city    = cities.find(c => c.id === cityId)
+    const cityName = city?.name ?? 'Melbourne'
+    const timezone = city?.timezone ?? getTimezone(cityName)
+
+    setLoading(true)
+    setError(null)
+
+    fetch('http://127.0.0.1:8000/update_status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        city_name:            cityName.toLowerCase(),
+        timezone:             timezone,
+        sun_screen_efficiency: 0.8,
+        skin_type:            3,
+      })
+    })
+      .then(r => { if (!r.ok) throw new Error('API error'); return r.json() })
+      .then(res => {
+        setData({
+          cityName:      cityName,
+          temperature:   res.temperature ?? 0,
+          weatherLabel:  parseWeatherLabel(res.weather_label),
+          uvIndex:       res.current_uv_index_time?.uv_index ?? 0,
+          safeSunTime:   res.safe_time ?? 0,
+          spf:           res.spf ?? 30,
+          spfSuggestion: 'Broad-spectrum sunscreen is preferred.',
+        })
+        setLoading(false)
+      })
+      .catch(() => {
+        setError('Unable to load UV data. Please check your connection.')
+        setLoading(false)
+      })
+  }, [])
+
+  // ── 时钟 ──────────────────────────────────────────────────
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
 
+  // ── 倒计时结束提醒 ────────────────────────────────────────
   useEffect(() => {
     if (!lastApplied) return
     const elapsed = Date.now() - lastApplied
@@ -121,14 +198,14 @@ export default function Home() {
       setShowBanner(true)
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('SunSense ☀️', {
-          body: "Time to reapply your sunscreen! SPF 30+ recommended.",
+          body: 'Time to reapply your sunscreen! SPF 30+ recommended.',
           icon: '/favicon.svg'
         })
       } else if ('Notification' in window && Notification.permission !== 'denied') {
         Notification.requestPermission().then(p => {
           if (p === 'granted') {
             new Notification('SunSense ☀️', {
-              body: "Time to reapply your sunscreen! SPF 30+ recommended.",
+              body: 'Time to reapply your sunscreen! SPF 30+ recommended.',
               icon: '/favicon.svg'
             })
           }
@@ -146,6 +223,32 @@ export default function Home() {
     notifiedRef.current = false
   }, [])
 
+  // ── Loading / Error 状态 ──────────────────────────────────
+  if (loading) return (
+    <div style={{
+      minHeight: '100vh', display: 'flex',
+      alignItems: 'center', justifyContent: 'center', background: '#f9fafb'
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: '40px', marginBottom: '12px' }}>☀️</p>
+        <p style={{ fontSize: '14px', color: '#9ca3af' }}>Loading UV data...</p>
+      </div>
+    </div>
+  )
+
+  if (error) return (
+    <div style={{
+      minHeight: '100vh', display: 'flex',
+      alignItems: 'center', justifyContent: 'center', background: '#f9fafb'
+    }}>
+      <div style={{ textAlign: 'center', maxWidth: '320px', padding: '0 24px' }}>
+        <p style={{ fontSize: '40px', marginBottom: '12px' }}>⚠️</p>
+        <p style={{ fontSize: '14px', color: '#ef4444', lineHeight: 1.6 }}>{error}</p>
+      </div>
+    </div>
+  )
+
+  // ── 派生数据 ──────────────────────────────────────────────
   const elapsed    = lastApplied ? Date.now() - lastApplied : null
   const elapsedMin = elapsed ? Math.floor(elapsed / 60000) : null
   const reapplyIn  = elapsed ? Math.max(0, Math.floor((REAPPLY_MS - elapsed) / 60000)) : null
@@ -153,10 +256,10 @@ export default function Home() {
   const isOverdue  = elapsed && elapsed >= REAPPLY_MS
   const almostTime = elapsed && elapsed >= REAPPLY_MS * 0.75
 
-  const theme      = getUVTheme(data.uvIndex)
-  const weather    = getWeatherInfo(data.weatherLabel)
-  const videoSrc   = getWeatherVideo(data.weatherLabel)
-  const uvBarW     = `${Math.min(100, (data.uvIndex / 11) * 100)}%`
+  const theme    = getUVTheme(data.uvIndex)
+  const weather  = getWeatherInfo(data.weatherLabel)
+  const videoSrc = getWeatherVideo(data.weatherLabel)
+  const uvBarW   = `${Math.min(100, (data.uvIndex / 11) * 100)}%`
 
   const dateStr = now.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })
   const timeStr = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
@@ -169,8 +272,7 @@ export default function Home() {
         <div style={{
           position: 'fixed', inset: 0,
           background: 'rgba(0,0,0,0.35)',
-          zIndex: 998,
-          backdropFilter: 'blur(2px)'
+          zIndex: 998, backdropFilter: 'blur(2px)'
         }} />
       )}
 
@@ -188,8 +290,7 @@ export default function Home() {
           zIndex: 1000, width: 'min(480px, 92vw)',
           background: '#fff', borderRadius: '16px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-          border: '2px solid #f97316',
-          padding: '20px 24px',
+          border: '2px solid #f97316', padding: '20px 24px',
           display: 'flex', flexDirection: 'column', gap: '12px',
           animation: 'slideDown 0.3s ease'
         }}>
@@ -216,8 +317,7 @@ export default function Home() {
           zIndex: 1000, width: 'min(480px, 92vw)',
           background: '#fff', borderRadius: '16px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-          border: '2px solid #f97316',
-          padding: '20px 24px',
+          border: '2px solid #f97316', padding: '20px 24px',
           display: 'flex', flexDirection: 'column', gap: '12px',
           animation: 'slideDown 0.3s ease'
         }}>
@@ -249,40 +349,31 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── Hero：视频背景 + 玻璃边框 ── */}
+      {/* ── Hero：视频背景 ── */}
       <div style={{
-        position: 'relative',
-        height: '200px',
+        position: 'relative', height: '200px',
         overflow: 'hidden',
         borderBottom: '1px solid rgba(255,255,255,0.2)',
         boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
       }}>
-
-        {/* 背景视频 */}
         <video
           key={videoSrc}
           autoPlay muted loop playsInline
           style={{
-            position: 'absolute',
-            top: 0, left: 0,
+            position: 'absolute', top: 0, left: 0,
             width: '100%', height: '100%',
-            objectFit: 'cover',
-            objectPosition: 'center',
-            zIndex: 0,
-            pointerEvents: 'none',
+            objectFit: 'cover', objectPosition: 'center',
+            zIndex: 0, pointerEvents: 'none',
           }}
         >
           <source src={videoSrc} type="video/mp4" />
         </video>
 
-        {/* UV 色调遮罩 */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 1,
-          background: theme.overlayColor,
-          pointerEvents: 'none',
+          background: theme.overlayColor, pointerEvents: 'none',
         }} />
 
-        {/* 底部渐变（让卡片内容过渡自然） */}
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
           height: '80px', zIndex: 2,
@@ -290,24 +381,16 @@ export default function Home() {
           pointerEvents: 'none',
         }} />
 
-        {/* 玻璃边框内容层 */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 3,
           padding: '24px 24px 20px',
           display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
         }}>
           <div style={{ maxWidth: '680px', margin: '0 auto', width: '100%' }}>
-
-            {/* 日期时间 */}
             <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '13px', marginBottom: '6px' }}>
               {dateStr} · {timeStr}
             </p>
-
-            {/* 城市名 + 天气图标 */}
-            <div style={{
-              display: 'flex', alignItems: 'flex-start',
-              justifyContent: 'space-between', gap: '16px'
-            }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
               <h1 style={{
                 color: '#fff', fontSize: 'clamp(28px, 6vw, 44px)',
                 fontWeight: 700, lineHeight: 1.1,
@@ -324,8 +407,6 @@ export default function Home() {
                 {weather.icon}
               </span>
             </div>
-
-            {/* 温度 + 天气描述 + UV 警告 */}
             <div style={{
               display: 'flex', alignItems: 'flex-end',
               justifyContent: 'space-between', flexWrap: 'wrap',
@@ -340,22 +421,16 @@ export default function Home() {
                 }}>
                   {data.temperature}°
                 </span>
-                <span style={{
-                  color: 'rgba(255,255,255,0.65)',
-                  fontSize: '15px', paddingBottom: '4px'
-                }}>
+                <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '15px', paddingBottom: '4px' }}>
                   {weather.desc}
                 </span>
               </div>
-
               {data.uvIndex > 3 && (
                 <div style={{
                   background: 'rgba(255,255,255,0.15)',
-                  backdropFilter: 'blur(10px)',
-                  WebkitBackdropFilter: 'blur(10px)',
+                  backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
                   border: '1px solid rgba(255,255,255,0.3)',
-                  borderRadius: '10px',
-                  padding: '6px 14px',
+                  borderRadius: '10px', padding: '6px 14px',
                   display: 'flex', alignItems: 'center', gap: '6px',
                 }}>
                   <span style={{ fontSize: '13px' }}>⚠️</span>
@@ -365,7 +440,6 @@ export default function Home() {
                 </div>
               )}
             </div>
-
           </div>
         </div>
       </div>
@@ -399,7 +473,6 @@ export default function Home() {
               fontSize: '24px', background: '#fff'
             }}>☀️</div>
           </div>
-
           <div style={{ position: 'relative', marginBottom: '8px' }}>
             <div style={{ background: '#e5e7eb', borderRadius: '99px', height: '10px', overflow: 'hidden' }}>
               <div style={{
@@ -423,7 +496,6 @@ export default function Home() {
             <span style={{ color: '#d8001d', fontWeight: 600 }}>V.High</span>
             <span style={{ color: '#b54cff', fontWeight: 600 }}>Extreme</span>
           </div>
-
           {data.uvIndex > 3 && (
             <div style={{
               background: '#fff7ed', border: '1px solid #fed7aa',
