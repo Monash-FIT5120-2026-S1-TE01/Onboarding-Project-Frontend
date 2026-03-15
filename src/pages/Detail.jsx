@@ -1,62 +1,78 @@
-import { useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
-// ──  详情页数据（后期可替换为真实 API 返回）────────────────────────────
-const MOCK_DETAIL_DATA = {
-  cityName: 'Melbourne',
-  dateLabel: 'Sun, 15 Mar · 01:54 am',
+// ── 支持城市白名单（用于根据城市名获取 timezone）──────────────────────────
+// Detail 页面会从 localStorage 读取当前选中的城市，再用城市名匹配 timezone。
+// 如果后端后续支持更多城市，可以在这里继续补充。
+const SUPPORTED_CITIES = [
+  { name: 'Melbourne',      timezone: 'Australia/Melbourne' },
+  { name: 'Sydney',         timezone: 'Australia/Sydney'    },
+  { name: 'Brisbane',       timezone: 'Australia/Brisbane'  },
+  { name: 'Perth',          timezone: 'Australia/Perth'     },
+  { name: 'Adelaide',       timezone: 'Australia/Adelaide'  },
+  { name: 'Canberra',       timezone: 'Australia/Sydney'    },
+  { name: 'Hobart',         timezone: 'Australia/Hobart'    },
+  { name: 'Darwin',         timezone: 'Australia/Darwin'    },
+  { name: 'Gold Coast',     timezone: 'Australia/Brisbane'  },
+  { name: 'Newcastle',      timezone: 'Australia/Sydney'    },
+  { name: 'Wollongong',     timezone: 'Australia/Sydney'    },
+  { name: 'Sunshine Coast', timezone: 'Australia/Brisbane'  },
+  { name: 'Geelong',        timezone: 'Australia/Melbourne' },
+  { name: 'Townsville',     timezone: 'Australia/Brisbane'  },
+  { name: 'Cairns',         timezone: 'Australia/Brisbane'  },
+  { name: 'Toowoomba',      timezone: 'Australia/Brisbane'  },
+  { name: 'Ballarat',       timezone: 'Australia/Melbourne' },
+  { name: 'Bendigo',        timezone: 'Australia/Melbourne' },
+  { name: 'Launceston',     timezone: 'Australia/Hobart'    },
+  { name: 'Mackay',         timezone: 'Australia/Brisbane'  },
+]
 
-  // 当前 UV 核心数据
-  currentUV: 4.0,
-  uvLabel: 'Moderate',
-  peakUV: 7,
-  peakTime: '1 PM',
-  lowestUV: 1,
-  lowestTime: '7 AM',
+// ── 接口地址────────────────
+// 说明：
+// 为了保证代码风格统一，这里也先沿用相同方式。
+// 后续如果统一切换 Azure 地址，只需要改这里这一行。
 
-  // 当前说明文案
-  nowSummary:
-    'Low for the rest of the day. Levels of Moderate or higher were reached from 10:00 to 18:00.',
-
-  // 防晒建议模块
-  protectionAdvice: {
-    title: 'Sunscreen',
-    description:
-      'Use broad-spectrum SPF 30+ sunscreen. Apply 20 minutes before outdoor exposure and reapply every 2 hours.',
-    recommendedAmount: [
-      'Face & neck: ~1 teaspoon',
-      'Arms and legs: apply generously',
-      'Whole body: about 30–35 mL',
-    ],
-  },
-
-  // 穿搭建议模块
-  outfitAdvice: {
-    title: 'Sun-Smart Casual',
-    tags: ['#Casual', '#StayInShade'],
-    description:
-      "Light and comfortable for today. Short sleeves are okay, but light long sleeves and long pants offer better protection. A hat is recommended, and an umbrella can help if you'll be outdoors longer.",
-  },
-
-  // 图表数据（后期可替换为后端返回的逐小时 UV 数据）
-  uvTrend: [
-    { time: '6 AM', value: 0.5 },
-    { time: '7 AM', value: 1 },
-    { time: '8 AM', value: 2 },
-    { time: '9 AM', value: 4 },
-    { time: '10 AM', value: 5.5 },
-    { time: '11 AM', value: 6.5 },
-    { time: '12 PM', value: 7 },
-    { time: '1 PM', value: 8 },
-    { time: '2 PM', value: 8.2 },
-    { time: '3 PM', value: 7.4 },
-    { time: '4 PM', value: 6 },
-    { time: '5 PM', value: 4 },
-    { time: '6 PM', value: 1.5 },
-    { time: '7 PM', value: 0.6 },
-  ],
+// ── 获取城市对应 timezone ─────────────────────────────────────────────
+function getTimezone(cityName) {
+  const found = SUPPORTED_CITIES.find(
+    c => c.name.toLowerCase() === cityName.toLowerCase()
+  )
+  return found?.timezone ?? 'Australia/Sydney'
 }
 
-// ── UV 等级主题工具函数 ───
+// ── 天气标签标准化 ───────────────────────────────────────────────────
+// 说明：
+// 后端 weather_label 可能返回不同描述，这里先统一映射为页面更稳定的标签。
+function parseWeatherLabel(raw) {
+  if (!raw) return 'Clear'
+  const r = raw.toLowerCase()
+  if (r.includes('clear'))        return 'Clear'
+  if (r.includes('cloudy'))       return 'Cloudy'
+  if (r.includes('fog'))          return 'Fog'
+  if (r.includes('drizzle'))      return 'Drizzle'
+  if (r.includes('rain'))         return 'Rain'
+  if (r.includes('snow'))         return 'Snow'
+  if (r.includes('thunderstorm')) return 'Thunderstorm'
+  return 'Clear'
+}
+
+// ── 天气图标与文案 ───────────────────────────────────────────────────
+function getWeatherInfo(label) {
+  if (!label) return { icon: '🌤️', desc: 'Unknown' }
+  const l = label.toLowerCase()
+  if (l.includes('clear'))        return { icon: '☀️',  desc: 'Clear sky' }
+  if (l.includes('cloudy'))       return { icon: '⛅',  desc: 'Partly cloudy' }
+  if (l.includes('fog'))          return { icon: '🌫️', desc: 'Foggy' }
+  if (l.includes('drizzle'))      return { icon: '🌦️', desc: 'Drizzle' }
+  if (l.includes('rain'))         return { icon: '🌧️', desc: 'Rain' }
+  if (l.includes('snow'))         return { icon: '❄️',  desc: 'Snow' }
+  if (l.includes('thunderstorm')) return { icon: '⛈️', desc: 'Thunderstorm' }
+  return { icon: '🌤️', desc: 'Unknown' }
+}
+
+// ── UV 等级主题工具函数 ─────────────────────────────────────────────
+// 说明：
+// 根据 UV 值切换 Hero 主色、建议卡颜色等。
+// 保留原来的视觉逻辑，不改变页面整体布局。
 function getUVTheme(uvi) {
   if (uvi <= 2) {
     return {
@@ -112,14 +128,268 @@ function getUVTheme(uvi) {
   }
 }
 
+// ── 将数字 UV 值转换为文字等级 ────────────────────────────────────────
+function getUVLabel(uvi) {
+  return getUVTheme(uvi).label
+}
+
+// ── 时间格式化：Hero 顶部日期时间 ─────────────────────────────────────
+// 说明：
+// 目标格式和 Home 页面保持接近：Sun, 15 Mar · 01:54 am
+function formatHeroDateLabel(isoString) {
+  const date = isoString ? new Date(isoString) : new Date()
+
+  const datePart = date.toLocaleDateString('en-AU', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  })
+
+  const timePart = date
+    .toLocaleTimeString('en-AU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    })
+    .toLowerCase()
+
+  return `${datePart} · ${timePart}`
+}
+
+// ── 时间格式化：用于图表 X 轴和说明文字 ────────────────────────────────
+// 例：2026-03-15T16:00 -> 4 PM
+function formatHourLabel(isoString) {
+  const date = new Date(isoString)
+  return date.toLocaleTimeString('en-AU', {
+    hour: 'numeric',
+    hour12: true,
+  }).replace(':00', '')
+}
+
+// 例：2026-03-15T16:00 -> 16:00
+function formatClockTime(isoString) {
+  const date = new Date(isoString)
+  return date.toLocaleTimeString('en-AU', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+// ── 合并过去 / 当前 / 未来 UV 数据为统一图表数组 ───────────────────────
+// 说明：
+// 1. 后端现在返回：past / current / forecast 三段数据。
+// 2. 为了维持当前页面的图表逻辑，这里把三段统一合并成 uvTrend。
+// 3. 最终结构统一为：[{ time, value, iso }]
+function buildTrendData(res) {
+  const map = new Map()
+
+  const pastUV = res?.past_uv_index_time?.uv_index ?? []
+  const pastDT = res?.past_uv_index_time?.datetime ?? []
+
+  pastDT.forEach((iso, index) => {
+    map.set(iso, {
+      iso,
+      time: formatHourLabel(iso),
+      value: Number(pastUV[index] ?? 0),
+    })
+  })
+
+  const currentIso = res?.current_uv_index_time?.datetime
+  const currentUV = Number(res?.current_uv_index_time?.uv_index ?? 0)
+
+  if (currentIso) {
+    map.set(currentIso, {
+      iso: currentIso,
+      time: formatHourLabel(currentIso),
+      value: currentUV,
+    })
+  }
+
+  const forecastUV = res?.forecast_uv_index_time?.uv_index ?? []
+  const forecastDT = res?.forecast_uv_index_time?.datetime ?? []
+
+  forecastDT.forEach((iso, index) => {
+    map.set(iso, {
+      iso,
+      time: formatHourLabel(iso),
+      value: Number(forecastUV[index] ?? 0),
+    })
+  })
+
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime()
+  )
+}
+
+// ── 从图表数据中找出峰值和最低值 ───────────────────────────────────────
+function getPeakAndLowest(uvTrend) {
+  if (!uvTrend.length) {
+    return {
+      peakUV: 0,
+      peakTime: '--',
+      lowestUV: 0,
+      lowestTime: '--',
+    }
+  }
+
+  let peak = uvTrend[0]
+  let lowest = uvTrend[0]
+
+  uvTrend.forEach(item => {
+    if (item.value > peak.value) peak = item
+    if (item.value < lowest.value) lowest = item
+  })
+
+  return {
+    peakUV: peak.value,
+    peakTime: peak.time,
+    lowestUV: lowest.value,
+    lowestTime: lowest.time,
+  }
+}
+
+// ── 构建当前说明文案 ────────────────────────────────────────────────
+// 说明：
+// 这里根据图表数据自动生成 Today’s UV Trend 下方说明文字，
+// “数据驱动描述”。
+function buildNowSummary(currentUV, uvTrend) {
+  if (!uvTrend.length) {
+    return 'UV data is currently unavailable. Please check again later.'
+  }
+
+  // 找出 UV >= 3 的时间段，用于生成“Moderate or higher”描述
+  const moderateOrHigher = uvTrend.filter(item => item.value >= 3)
+
+  if (!moderateOrHigher.length) {
+    return `UV is currently low. Protection is generally not required right now, but staying informed is still recommended.`
+  }
+
+  const first = moderateOrHigher[0]
+  const last = moderateOrHigher[moderateOrHigher.length - 1]
+  const currentLabel = getUVLabel(currentUV)
+
+  return `UV is currently ${currentLabel.toLowerCase()}. Levels of Moderate or higher are expected from ${first.time} to ${last.time} today.`
+}
+
+// ── 生成防晒建议文案 ────────────────────────────────────────────────
+// 说明：
+// 后端当前主要给到 SPF，warnings 可能为空，所以这里做前端兜底。
+function buildProtectionAdvice(spf, warningsObj, currentUV) {
+  const warningValues = warningsObj && typeof warningsObj === 'object'
+    ? Object.values(warningsObj).filter(Boolean)
+    : []
+
+  let description = `Use broad-spectrum SPF ${spf}+ sunscreen. Apply 20 minutes before outdoor exposure and reapply every 2 hours.`
+
+  if (warningValues.length > 0) {
+    description = `${description} ${warningValues.join(' ')}`
+  } else if (currentUV >= 6) {
+    description = `${description} Extra caution is advised during peak UV hours.`
+  } else if (currentUV >= 3) {
+    description = `${description} Shade, sunglasses, and a hat are recommended during outdoor activities.`
+  }
+
+  return {
+    title: 'Sunscreen',
+    description,
+    recommendedAmount: [
+      'Face & neck: ~1 teaspoon',
+      'Arms and legs: apply generously',
+      'Whole body: about 30–35 mL',
+    ],
+  }
+}
+
+// ── 生成穿搭建议内容 ────────────────────────────────────────────────
+// 说明：
+// 后端返回 sugg_cloth 时优先使用；若为空或 “No suggestion.”，则前端提供兜底。
+function buildOutfitAdvice(suggCloth, weatherLabel, temperature, currentUV) {
+  const noSuggestion =
+    !suggCloth ||
+    suggCloth.trim() === '' ||
+    suggCloth.trim().toLowerCase() === 'no suggestion.'
+
+  let description = suggCloth
+
+  if (noSuggestion) {
+    if (currentUV >= 6) {
+      description =
+        'UV levels are high today. Lightweight long sleeves, sunglasses, and a wide-brim hat are recommended for better protection outdoors.'
+    } else if (temperature >= 26) {
+      description =
+        'It is warm outside today. Choose breathable clothing and bring sunglasses and a hat for additional sun protection.'
+    } else if (weatherLabel.toLowerCase().includes('cloudy')) {
+      description =
+        'It may look cloudy, but UV can still affect exposed skin. Light layers, sunglasses, and a hat remain a good choice.'
+    } else {
+      description =
+        'Dress comfortably for today’s conditions, and consider sunglasses or a hat during outdoor exposure.'
+    }
+  }
+
+  const tags = []
+  if (temperature >= 26) tags.push('#WarmWeather')
+  if (currentUV >= 3) tags.push('#SunSmart')
+  if (weatherLabel.toLowerCase().includes('cloudy')) tags.push('#CloudyDay')
+  if (tags.length === 0) tags.push('#DailyComfort')
+
+  return {
+    title: 'Sun-Smart Casual',
+    tags,
+    description,
+  }
+}
+
+// ── 将后端原始返回映射为 Detail 页面使用的数据结构 ─────────────────────
+// 说明：
+// 这是本文件里最关键的“数据适配层”。
+// 后续如果后端字段变动，优先改这个函数即可，页面主体布局基本不用改。
+function mapResponseToDetailData(res, cityName) {
+  const uvTrend = buildTrendData(res)
+  const currentUV = Number(res?.current_uv_index_time?.uv_index ?? 0)
+  const currentDateTime = res?.current_uv_index_time?.datetime ?? null
+  const weatherLabel = parseWeatherLabel(res?.weather_label)
+  const temperature = Number(res?.temperature ?? 0)
+  const spf = Number(res?.spf ?? 30)
+
+  const { peakUV, peakTime, lowestUV, lowestTime } = getPeakAndLowest(uvTrend)
+
+  return {
+    cityName: cityName || res?.city || 'Melbourne',
+    dateLabel: formatHeroDateLabel(currentDateTime),
+    currentUV,
+    uvLabel: getUVLabel(currentUV),
+    peakUV,
+    peakTime,
+    lowestUV,
+    lowestTime,
+    currentTimeLabel: currentDateTime ? formatClockTime(currentDateTime) : '--:--',
+    nowSummary: buildNowSummary(currentUV, uvTrend),
+    protectionAdvice: buildProtectionAdvice(spf, res?.warnings, currentUV),
+    outfitAdvice: buildOutfitAdvice(res?.sugg_cloth, weatherLabel, temperature, currentUV),
+    uvTrend,
+    weatherLabel,
+    temperature,
+    spf,
+  }
+}
+
 // ── 构建 SVG 图表点位 ─────────────────────────────────────────────
+// 说明：
+// 当前仍沿用你原来的 SVG 绘图方案，不改变图表展现方式。
 function buildChartGeometry(data, width, height, maxY = 12) {
+  const safeData = data.length > 1 ? data : [
+    { time: '12 AM', value: 0, iso: 'fallback-1' },
+    { time: '1 AM', value: 0, iso: 'fallback-2' },
+  ]
+
   const padding = { top: 18, right: 18, bottom: 28, left: 18 }
   const innerW = width - padding.left - padding.right
   const innerH = height - padding.top - padding.bottom
 
-  const points = data.map((item, index) => {
-    const x = padding.left + (index / (data.length - 1)) * innerW
+  const points = safeData.map((item, index) => {
+    const x = padding.left + (index / (safeData.length - 1)) * innerW
     const y = padding.top + innerH - (item.value / maxY) * innerH
     return { ...item, x, y }
   })
@@ -140,19 +410,117 @@ function buildChartGeometry(data, width, height, maxY = 12) {
 
 // ── 主组件 ───────────────────────────────────────────────────────
 export default function Detail() {
-  // 当前先直接使用 mock 数据，后期可替换为 API 返回
-  const data = MOCK_DETAIL_DATA
+  // ── 页面状态 ───────────────────────────────────────────────
+  // 说明：
+  // 1. data：存放已经映射好的页面数据
+  // 2. loading / error
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  // 根据 UV 主题动态切换颜色
-  const theme = getUVTheme(data.currentUV)
+  // ── 页面加载时请求后端真实数据 ──────────────────────────────
+  useEffect(() => {
+    // 读取当前选中的城市（逻辑与 Home 页面保持一致）
+    const cityId = localStorage.getItem('sunsense_selected_city') ?? 'melbourne'
+    const stored = localStorage.getItem('sunsense_cities')
+    const cities = stored ? JSON.parse(stored) : []
+    const city = cities.find(c => c.id === cityId)
+
+    const cityName = city?.name ?? 'Melbourne'
+    const timezone = city?.timezone ?? getTimezone(cityName)
+
+    setLoading(true)
+    setError(null)
+
+    fetch('https://uv-level-monitor-anb3fvckcsfcf4a3.australiaeast-01.azurewebsites.net/update_status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        city_name: cityName.toLowerCase(),
+        timezone: timezone,
+        sun_screen_efficiency: 0.8,
+        skin_type: 3,
+      }),
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('API error')
+        return res.json()
+      })
+      .then(res => {
+        const mapped = mapResponseToDetailData(res, cityName)
+        setData(mapped)
+        setLoading(false)
+      })
+      .catch(() => {
+        setError('Unable to load detail data. Please check your connection.')
+        setLoading(false)
+      })
+  }, [])
 
   // 图表几何数据
   const chart = useMemo(() => {
-    return buildChartGeometry(data.uvTrend, 920, 360, 12)
-  }, [data.uvTrend])
+    const trendData = data?.uvTrend ?? []
+    return buildChartGeometry(trendData, 920, 360, 12)
+  }, [data?.uvTrend])
 
-  // 当前时间高亮点
-  const nowPoint = chart.points[11] ?? chart.points[0]
+
+  
+  // ── Loading 状态 ───────────────────────────────────────────
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#f9fafb',
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: '40px', marginBottom: '12px' }}>☀️</p>
+          <p style={{ fontSize: '14px', color: '#9ca3af' }}>Loading detail data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Error 状态 ─────────────────────────────────────────────
+  if (error || !data) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#f9fafb',
+        }}
+      >
+        <div style={{ textAlign: 'center', maxWidth: '320px', padding: '0 24px' }}>
+          <p style={{ fontSize: '40px', marginBottom: '12px' }}>⚠️</p>
+          <p style={{ fontSize: '14px', color: '#ef4444', lineHeight: 1.6 }}>
+            {error ?? 'Unable to load page data.'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── 派生展示数据 ───────────────────────────────────────────
+  const theme = getUVTheme(data.currentUV)
+  const weather = getWeatherInfo(data.weatherLabel)
+
+  // 当前时间高亮点：
+  // 这里取图表中最接近“当前时间点”的那个点。由于 current 数据已被合并进 uvTrend，
+  // 一般取“最后一个过去或当前点”即可。
+  const nowPointIndex = Math.max(0, Math.min(chart.points.length - 1, data.uvTrend.findIndex(
+    item => formatClockTime(item.iso ?? '') === data.currentTimeLabel
+  )))
+  const nowPoint =
+    nowPointIndex >= 0 && chart.points[nowPointIndex]
+      ? chart.points[nowPointIndex]
+      : chart.points[Math.max(0, chart.points.length - 2)] ?? chart.points[0]
 
   return (
     <div
@@ -243,7 +611,7 @@ export default function Detail() {
               {data.cityName}
             </h1>
 
-            {/* 小天气徽章，增加趣味感 */}
+            {/* 小天气徽章：保留你原先的趣味元素，并让视觉语言更接近队友页面 */}
             <span
               style={{
                 display: 'inline-flex',
@@ -259,7 +627,7 @@ export default function Detail() {
                 boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
               }}
             >
-              🌤️
+              {weather.icon}
             </span>
           </div>
 
@@ -307,7 +675,7 @@ export default function Detail() {
                   lineHeight: 1,
                 }}
               >
-                {data.currentUV}
+                {data.currentUV.toFixed(2)}
               </span>
 
               <div
@@ -341,7 +709,7 @@ export default function Detail() {
                     border: '1px solid rgba(255,255,255,0.18)',
                   }}
                 >
-                  SPF 30+ helpful
+                  SPF {data.spf}+ helpful
                 </span>
               </div>
 
@@ -387,7 +755,7 @@ export default function Detail() {
                     fontWeight: 600,
                   }}
                 >
-                  Sun protection recommended
+                  {data.currentUV > 3 ? 'Sun protection recommended' : 'UV levels currently low'}
                 </span>
               </div>
 
@@ -405,7 +773,7 @@ export default function Detail() {
                 suggestions designed for current conditions.
               </div>
 
-              {/* 小型统计胶囊，增加视觉趣味 */}
+              {/* 小型统计胶囊 */}
               <div
                 style={{
                   marginTop: '18px',
@@ -417,6 +785,7 @@ export default function Detail() {
               >
                 <InfoChip icon="🔺" text={`Peak ${data.peakUV} at ${data.peakTime}`} />
                 <InfoChip icon="🌅" text={`Lowest ${data.lowestUV} at ${data.lowestTime}`} />
+                <InfoChip icon="🌡️" text={`${data.temperature}° · ${weather.desc}`} />
               </div>
             </div>
           </div>
@@ -617,25 +986,26 @@ export default function Detail() {
                   strokeWidth="3"
                 />
 
-                {/* X 轴时间标签 */}
-                {[
-                  chart.points[0],
-                  chart.points[3],
-                  chart.points[6],
-                  chart.points[9],
-                  chart.points[12],
-                ].map((point, index) => (
-                  <text
-                    key={index}
-                    x={point.x}
-                    y={348}
-                    textAnchor="middle"
-                    fill="#a1a1aa"
-                    fontSize="11"
-                  >
-                    {point.time}
-                  </text>
-                ))}
+                {/* X 轴时间标签：动态取 5 个节点，避免写死 */}
+                {chart.points
+                  .filter((_, index) => {
+                    if (chart.points.length <= 5) return true
+                    const step = Math.floor((chart.points.length - 1) / 4)
+                    return index === 0 || index === chart.points.length - 1 || index % step === 0
+                  })
+                  .slice(0, 5)
+                  .map((point, index) => (
+                    <text
+                      key={index}
+                      x={point.x}
+                      y={348}
+                      textAnchor="middle"
+                      fill="#a1a1aa"
+                      fontSize="11"
+                    >
+                      {point.time}
+                    </text>
+                  ))}
               </svg>
             </div>
           </div>
@@ -650,7 +1020,7 @@ export default function Detail() {
                 marginBottom: '4px',
               }}
             >
-              Now, 17:56
+              Now, {data.currentTimeLabel}
             </p>
             <p
               style={{
