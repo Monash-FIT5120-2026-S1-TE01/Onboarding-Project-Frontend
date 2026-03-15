@@ -9,10 +9,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Landing 页面独立，不带 NavBar */}
+        {/* Landing page independent, does not have NavBar. */}
         <Route path="/" element={<Landing />} />
 
-        {/* 其他页面带 NavBar */}
+        {/* Other pages have NavBar */}
         <Route path="/*" element={
           <div className="min-h-screen flex flex-col bg-white">
             <NavBar />

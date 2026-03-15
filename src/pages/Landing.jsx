@@ -65,7 +65,7 @@ export default function Landing() {
         }
       `}</style>
 
-      {/* ── 背景视频 ── */}
+      {/* ── Background video ── */}
       <video
         autoPlay muted loop playsInline
         style={{
@@ -77,14 +77,14 @@ export default function Landing() {
         <source src="/images/bac_0.mp4" type="video/mp4" />
       </video>
 
-      {/* 底部渐变遮罩 */}
+      {/* Bottom gradient mask */}
       <div style={{
         position: 'absolute', top: 0, bottom: 0, right: 0, left: 0,
         background: 'linear-gradient(transparent 50%, rgb(0,0,0))',
         zIndex: 1, pointerEvents: 'none',
       }} />
 
-      {/* ── 顶部导航 ── */}
+      {/* ── Top navigation ── */}
       <header style={{
         position: 'absolute', top: 0, zIndex: 10,
         width: '100%', display: 'flex',
@@ -112,7 +112,7 @@ export default function Landing() {
         </nav>
       </header>
 
-      {/* ── 标题区域 ── */}
+      {/* ── Title Area ── */}
       <div
         className="landing-content"
         style={{
@@ -149,7 +149,7 @@ export default function Landing() {
           </span>
         </div>
 
-        {/* 副标题 */}
+        {/* Subtitle */}
         <h3
           className="landing-subtitle"
           style={{
@@ -166,7 +166,7 @@ export default function Landing() {
           Your Daily UV Protection Companion
         </h3>
 
-        {/* 主标题 */}
+        {/* Main Title */}
         <h1
           className="landing-title"
           style={{
@@ -185,7 +185,7 @@ export default function Landing() {
         </h1>
       </div>
 
-      {/* ── 描述文字 ── */}
+      {/* ── Description text ── */}
       <div style={{
         width: '100%', display: 'flex', justifyContent: 'center',
         position: 'absolute', bottom: '18%', zIndex: 6,
@@ -211,7 +211,7 @@ export default function Landing() {
         </p>
       </div>
 
-      {/* ── CTA 按钮 ── */}
+      {/* ── CTA Botton ── */}
       <div style={{
         position: 'absolute', bottom: '8%',
         display: 'flex', justifyContent: 'center',

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 
-// ── 城市白名单（用于获取 timezone）────────────────────────────
+// ── City whitelist (for timezone lookup) ─────────────────────
 const SUPPORTED_CITIES = [
   { name: 'Melbourne',      timezone: 'Australia/Melbourne' },
   { name: 'Sydney',         timezone: 'Australia/Sydney'    },
@@ -24,6 +24,9 @@ const SUPPORTED_CITIES = [
   { name: 'Mackay',         timezone: 'Australia/Brisbane'  },
 ]
 
+const CACHE_KEY   = 'sunsense_uv_cache'
+const CACHE_TTL   = 60 * 60 * 1000 // 1 hour in ms
+
 function getTimezone(cityName) {
   const found = SUPPORTED_CITIES.find(
     c => c.name.toLowerCase() === cityName.toLowerCase()
@@ -44,7 +47,7 @@ function parseWeatherLabel(raw) {
   return 'Clear'
 }
 
-// ── 天气视频映射 ──────────────────────────────────────────────
+// ── Weather video mapping ─────────────────────────────────────
 function getWeatherVideo(label) {
   if (!label) return '/videos/Clear.mp4'
   const l = label.toLowerCase()
@@ -58,7 +61,7 @@ function getWeatherVideo(label) {
   return '/videos/Clear.mp4'
 }
 
-// ── UV 配色（WHO/WMO 标准）────────────────────────────────────
+// ── UV theme (WHO/WMO standard) ───────────────────────────────
 function getUVTheme(uvi) {
   if (uvi <= 2) return {
     label: 'Low',
@@ -87,7 +90,7 @@ function getUVTheme(uvi) {
   }
 }
 
-// UV 进度条：分段渐变（WHO 11色标准）
+// ── UV progress bar gradient (WHO 11-color standard) ──────────
 const UV_BAR_STOPS = [
   '#4eb400', '#a0ce00', '#f7e400',
   '#f8b600', '#f88700', '#f85900',
@@ -114,10 +117,14 @@ function getWeatherInfo(label) {
   return { icon: '🌤️', desc: 'Unknown' }
 }
 
+// ── Safe sun time formatter (fix #1) ─────────────────────────
 function formatTime(totalMinutes) {
-  if (totalMinutes < 60) return `${totalMinutes} min`
+  if (!totalMinutes || totalMinutes <= 0) return '0 min'
+  if (totalMinutes < 60) return `${Math.round(totalMinutes)} min`
+  const totalHours = totalMinutes / 60
+  if (totalHours >= 24) return '> 1 day'
   const h = Math.floor(totalMinutes / 60)
-  const m = totalMinutes % 60
+  const m = Math.round(totalMinutes % 60)
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
@@ -128,12 +135,37 @@ const UNIVERSAL_TIPS = [
   'Check the UV Index regularly, even on cloudy days.',
 ]
 
-// ── 主组件 ────────────────────────────────────────────────────
+// ── Cache helpers ─────────────────────────────────────────────
+function getCached(cityId) {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const cache = JSON.parse(raw)
+    const entry = cache[cityId]
+    if (!entry) return null
+    if (Date.now() - entry.ts > CACHE_TTL) return null
+    return entry.data
+  } catch { return null }
+}
+
+function setCached(cityId, data) {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    const cache = raw ? JSON.parse(raw) : {}
+    cache[cityId] = { ts: Date.now(), data }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache))
+  // eslint-disable-next-line no-unused-vars
+  } catch (err) {
+    // ignore cache errors
+  }
+}
+
+// ── Main component ────────────────────────────────────────────
 export default function Home() {
-  const [data, setData]   = useState(null)
+  const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [now, setNow]     = useState(new Date())
+  const [error, setError]     = useState(null)
+  const [now, setNow]         = useState(new Date())
   const [lastApplied, setLastApplied] = useState(() => {
     const s = localStorage.getItem('sunsense_last_applied')
     return s ? parseInt(s) : null
@@ -142,14 +174,22 @@ export default function Home() {
   const [showDonePopup, setShowDonePopup] = useState(false)
   const notifiedRef = useRef(false)
 
-  // ── 读取选中城市并请求真实数据 ────────────────────────────
+  // ── Fetch UV data with 1-hour cache ──────────────────────────
   useEffect(() => {
-    const cityId  = localStorage.getItem('sunsense_selected_city') ?? 'melbourne'
-    const stored  = localStorage.getItem('sunsense_cities')
-    const cities  = stored ? JSON.parse(stored) : []
-    const city    = cities.find(c => c.id === cityId)
+    const cityId   = localStorage.getItem('sunsense_selected_city') ?? 'melbourne'
+    const stored   = localStorage.getItem('sunsense_cities')
+    const cities   = stored ? JSON.parse(stored) : []
+    const city     = cities.find(c => c.id === cityId)
     const cityName = city?.name ?? 'Melbourne'
     const timezone = city?.timezone ?? getTimezone(cityName)
+
+    // Check cache first
+    const cached = getCached(cityId)
+    if (cached) {
+      setData(cached)
+      setLoading(false)
+      return
+    }
 
     setLoading(true)
     setError(null)
@@ -158,23 +198,25 @@ export default function Home() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        city_name:            cityName.toLowerCase(),
-        timezone:             timezone,
+        city_name:             cityName.toLowerCase(),
+        timezone:              timezone,
         sun_screen_efficiency: 0.8,
-        skin_type:            3,
+        skin_type:             3,
       })
     })
       .then(r => { if (!r.ok) throw new Error('API error'); return r.json() })
       .then(res => {
-        setData({
+        const parsed = {
           cityName:      cityName,
           temperature:   res.temperature ?? 0,
           weatherLabel:  parseWeatherLabel(res.weather_label),
           uvIndex:       res.current_uv_index_time?.uv_index ?? 0,
           safeSunTime:   res.safe_time ?? 0,
-          spf:           res.spf ?? 30,
+          spf:           res.spf ?? 0,
           spfSuggestion: 'Broad-spectrum sunscreen is preferred.',
-        })
+        }
+        setCached(cityId, parsed)
+        setData(parsed)
         setLoading(false)
       })
       .catch(() => {
@@ -183,13 +225,13 @@ export default function Home() {
       })
   }, [])
 
-  // ── 时钟 ──────────────────────────────────────────────────
+  // ── Clock tick ────────────────────────────────────────────────
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
 
-  // ── 倒计时结束提醒 ────────────────────────────────────────
+  // ── Reapply reminder ──────────────────────────────────────────
   useEffect(() => {
     if (!lastApplied) return
     const elapsed = Date.now() - lastApplied
@@ -197,14 +239,14 @@ export default function Home() {
       notifiedRef.current = true
       setShowBanner(true)
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('SunSense ☀️', {
+        new Notification('SunGuard ☀️', {
           body: 'Time to reapply your sunscreen! SPF 30+ recommended.',
           icon: '/favicon.svg'
         })
       } else if ('Notification' in window && Notification.permission !== 'denied') {
         Notification.requestPermission().then(p => {
           if (p === 'granted') {
-            new Notification('SunSense ☀️', {
+            new Notification('SunGuard ☀️', {
               body: 'Time to reapply your sunscreen! SPF 30+ recommended.',
               icon: '/favicon.svg'
             })
@@ -223,7 +265,7 @@ export default function Home() {
     notifiedRef.current = false
   }, [])
 
-  // ── Loading / Error 状态 ──────────────────────────────────
+  // ── Loading / Error states ────────────────────────────────────
   if (loading) return (
     <div style={{
       minHeight: '100vh', display: 'flex',
@@ -248,7 +290,8 @@ export default function Home() {
     </div>
   )
 
-  // ── 派生数据 ──────────────────────────────────────────────
+  // ── Derived values ────────────────────────────────────────────
+  // eslint-disable-next-line react-hooks/purity
   const elapsed    = lastApplied ? Date.now() - lastApplied : null
   const elapsedMin = elapsed ? Math.floor(elapsed / 60000) : null
   const reapplyIn  = elapsed ? Math.max(0, Math.floor((REAPPLY_MS - elapsed) / 60000)) : null
@@ -260,10 +303,14 @@ export default function Home() {
   const weather  = getWeatherInfo(data.weatherLabel)
   const videoSrc = getWeatherVideo(data.weatherLabel)
   const uvBarW   = `${Math.min(100, (data.uvIndex / 11) * 100)}%`
+  const uvDisplay = Math.round(data.uvIndex) // fix #4: no decimal
 
   const dateStr = now.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })
   const timeStr = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
   const hasModal = showBanner || showDonePopup
+
+  // fix #6: SPF display logic
+  const spfDisplay = (!data.spf || data.spf === 0)
 
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', paddingBottom: '40px', position: 'relative' }}>
@@ -283,7 +330,7 @@ export default function Home() {
         }
       `}</style>
 
-      {/* ── 逾期弹窗 ── */}
+      {/* Overdue reapply banner */}
       {showBanner && (
         <div style={{
           position: 'fixed', top: '70px', left: '50%', transform: 'translateX(-50%)',
@@ -310,7 +357,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── Done 成功弹窗 ── */}
+      {/* Done success popup */}
       {showDonePopup && (
         <div style={{
           position: 'fixed', top: '70px', left: '50%', transform: 'translateX(-50%)',
@@ -349,7 +396,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── Hero：视频背景 ── */}
+      {/* Hero video background */}
       <div style={{
         position: 'relative', height: '200px',
         overflow: 'hidden',
@@ -444,20 +491,20 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── 卡片区域 ── */}
+      {/* Card section */}
       <div style={{
         maxWidth: '680px', margin: '16px auto 0',
         padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '16px'
       }}>
 
-        {/* UV Index 卡片 */}
+        {/* UV Index card */}
         <Card>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div>
               <Label>☀ UV INDEX</Label>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginTop: '6px' }}>
                 <span style={{ fontSize: '52px', fontWeight: 700, color: theme.color, lineHeight: 1 }}>
-                  {data.uvIndex.toFixed(1)}
+                  {uvDisplay}
                 </span>
                 <span style={{
                   fontSize: '13px', fontWeight: 600,
@@ -507,7 +554,7 @@ export default function Home() {
           )}
         </Card>
 
-        {/* Reapply Reminder 卡片 */}
+        {/* Reapply Reminder card */}
         <Card>
           <Label>⏱ REAPPLY REMINDER</Label>
           {lastApplied ? (
@@ -564,11 +611,23 @@ export default function Home() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           <Card>
             <Label>🧴 SPF</Label>
-            <p style={{ fontSize: '40px', fontWeight: 700, color: '#f97316', margin: '6px 0 2px', lineHeight: 1 }}>
-              {data.spf}+
-            </p>
-            <p style={{ fontSize: '12px', color: '#78716c', fontWeight: 500, marginBottom: '6px' }}>Recommended</p>
-            <p style={{ fontSize: '11px', color: '#9ca3af', lineHeight: 1.4 }}>{data.spfSuggestion}</p>
+            {spfDisplay ? (
+              <>
+                <p style={{ fontSize: '28px', fontWeight: 700, color: '#4eb400', margin: '6px 0 2px', lineHeight: 1 }}>
+                  No Need
+                </p>
+                <p style={{ fontSize: '12px', color: '#78716c', fontWeight: 500, marginBottom: '6px' }}>UV level is safe</p>
+                <p style={{ fontSize: '11px', color: '#9ca3af', lineHeight: 1.4 }}>No sunscreen required at this UV level.</p>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: '40px', fontWeight: 700, color: '#f97316', margin: '6px 0 2px', lineHeight: 1 }}>
+                  {data.spf}+
+                </p>
+                <p style={{ fontSize: '12px', color: '#78716c', fontWeight: 500, marginBottom: '6px' }}>Recommended</p>
+                <p style={{ fontSize: '11px', color: '#9ca3af', lineHeight: 1.4 }}>{data.spfSuggestion}</p>
+              </>
+            )}
           </Card>
           <Card>
             <Label>🛡 SAFE SUN TIME</Label>
@@ -577,7 +636,7 @@ export default function Home() {
               {formatTime(data.safeSunTime)}
             </p>
             <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px', lineHeight: 1.4 }}>
-              Assumes SPF {data.spf} applied
+              {spfDisplay ? 'No sunscreen applied' : `Assumes SPF ${data.spf} applied`}
             </p>
           </Card>
         </div>
