@@ -51,5 +51,5 @@ jobs:
         with:
           app-name: 'UV-level-monitor-UI'
           slot-name: 'Production'
-          package: .
+          package: ./dist
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_F39ED69F52F64738918200BD9B5651F4 }}
