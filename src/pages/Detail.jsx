@@ -457,6 +457,14 @@ export default function Detail() {
       })
   }, [])
 
+  // 图表几何数据
+  const chart = useMemo(() => {
+    const trendData = data?.uvTrend ?? []
+    return buildChartGeometry(data.uvTrend, 920, 360, 12)
+  }, [data.uvTrend])
+
+
+  
   // ── Loading 状态 ───────────────────────────────────────────
   if (loading) {
     return (
@@ -502,11 +510,6 @@ export default function Detail() {
   // ── 派生展示数据 ───────────────────────────────────────────
   const theme = getUVTheme(data.currentUV)
   const weather = getWeatherInfo(data.weatherLabel)
-
-  // 图表几何数据
-  const chart = useMemo(() => {
-    return buildChartGeometry(data.uvTrend, 920, 360, 12)
-  }, [data.uvTrend])
 
   // 当前时间高亮点：
   // 这里取图表中最接近“当前时间点”的那个点。由于 current 数据已被合并进 uvTrend，
