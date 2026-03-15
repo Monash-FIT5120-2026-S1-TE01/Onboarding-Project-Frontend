@@ -8,16 +8,16 @@ const DEFAULT_CITIES = [
 // ── Mock UV 数据生成（Commit 4 替换为真实批量 API）────────────
 function getMockUVData(cityName) {
   const mock = {
-    Melbourne: { uvIndex: 4.45, temperature: 28, weatherCode: 1 },
-    Sydney:    { uvIndex: 6.10, temperature: 32, weatherCode: 0 },
-    Adelaide:  { uvIndex: 3.20, temperature: 16, weatherCode: 61 },
-    Brisbane:  { uvIndex: 7.80, temperature: 30, weatherCode: 1 },
-    Perth:     { uvIndex: 9.00, temperature: 35, weatherCode: 0 },
-    Hobart:    { uvIndex: 2.10, temperature: 14, weatherCode: 3 },
-    Darwin:    { uvIndex: 11.0, temperature: 33, weatherCode: 80 },
-    Canberra:  { uvIndex: 5.50, temperature: 22, weatherCode: 2 },
+    Melbourne: { uvIndex: 4.45, temperature: 28, weatherLabel: 'Cloudy' },
+    Sydney:    { uvIndex: 6.10, temperature: 32, weatherLabel: 'Clear'  },
+    Adelaide:  { uvIndex: 3.20, temperature: 16, weatherLabel: 'Rain'   },
+    Brisbane:  { uvIndex: 7.80, temperature: 30, weatherLabel: 'Cloudy' },
+    Perth:     { uvIndex: 9.00, temperature: 35, weatherLabel: 'Clear'  },
+    Hobart:    { uvIndex: 2.10, temperature: 14, weatherLabel: 'Cloudy' },
+    Darwin:    { uvIndex: 11.0, temperature: 33, weatherLabel: 'Rain'   },
+    Canberra:  { uvIndex: 5.50, temperature: 22, weatherLabel: 'Cloudy' },
   }
-  return mock[cityName] ?? { uvIndex: 5.0, temperature: 25, weatherCode: 1 }
+  return mock[cityName] ?? { uvIndex: 5.0, temperature: 25, weatherLabel: 'Clear' }
 }
 
 // ── 工具函数 ──────────────────────────────────────────────────
@@ -29,27 +29,29 @@ function getUVTheme(uvi) {
   return               { label: 'Extreme',   color: '#b54cff', bg: '#faf5ff' }
 }
 
-function getWeatherIcon(code) {
-  if (code === 0)                          return '☀️'
-  if ([1, 2, 3].includes(code))            return '⛅'
-  if ([45, 48].includes(code))             return '🌫️'
-  if ([51,53,55,56,57].includes(code))     return '🌦️'
-  if ([61,63,65,66,67].includes(code))     return '🌧️'
-  if ([71,73,75,77].includes(code))        return '❄️'
-  if ([80,81,82].includes(code))           return '🌩️'
-  if ([95,96,99].includes(code))           return '⛈️'
+function getWeatherIcon(label) {
+  if (!label) return '🌤️'
+  const l = label.toLowerCase()
+  if (l.includes('clear'))        return '☀️'
+  if (l.includes('cloudy'))       return '⛅'
+  if (l.includes('fog'))          return '🌫️'
+  if (l.includes('drizzle'))      return '🌦️'
+  if (l.includes('rain'))         return '🌧️'
+  if (l.includes('snow'))         return '❄️'
+  if (l.includes('thunderstorm')) return '⛈️'
   return '🌤️'
 }
 
-function getWeatherDesc(code) {
-  if (code === 0)                          return 'Clear sky'
-  if ([1, 2, 3].includes(code))            return 'Partly cloudy'
-  if ([45, 48].includes(code))             return 'Foggy'
-  if ([51,53,55,56,57].includes(code))     return 'Drizzle'
-  if ([61,63,65,66,67].includes(code))     return 'Rain'
-  if ([71,73,75,77].includes(code))        return 'Snow'
-  if ([80,81,82].includes(code))           return 'Showers'
-  if ([95,96,99].includes(code))           return 'Thunderstorm'
+function getWeatherDesc(label) {
+  if (!label) return 'Unknown'
+  const l = label.toLowerCase()
+  if (l.includes('clear'))        return 'Clear sky'
+  if (l.includes('cloudy'))       return 'Partly cloudy'
+  if (l.includes('fog'))          return 'Foggy'
+  if (l.includes('drizzle'))      return 'Drizzle'
+  if (l.includes('rain'))         return 'Rain'
+  if (l.includes('snow'))         return 'Snow'
+  if (l.includes('thunderstorm')) return 'Thunderstorm'
   return 'Unknown'
 }
 
@@ -83,14 +85,12 @@ export default function Cities() {
   const [searchErr, setSearchErr]   = useState('')
   const [deletingId, setDeletingId] = useState(null)
 
-  // 加载各城市 mock UV 数据
   useEffect(() => {
     const map = {}
     cities.forEach(c => { map[c.id] = getMockUVData(c.name) })
     setUvDataMap(map)
   }, [cities])
 
-  // 搜索澳洲城市
   const handleSearch = useCallback(async () => {
     const q = query.trim()
     if (!q) return
@@ -101,8 +101,6 @@ export default function Cities() {
       const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`
       const res  = await fetch(url)
       const json = await res.json()
-
-      // 严格过滤：只保留 country_code === 'AU' 的结果
       const auResults = (json.results ?? []).filter(r => r.country_code === 'AU')
       if (!auResults.length) {
         setSearchErr('No Australian cities found. Try another name.')
@@ -163,27 +161,71 @@ export default function Cities() {
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', paddingBottom: '40px' }}>
 
-      {/* ── Header ── */}
+      {/* ── Hero：City.mp4 视频背景 ── */}
       <div style={{
-        background: 'linear-gradient(135deg, #1a0500 0%, #7c2d0a 50%, #f97316 100%)',
-        padding: '28px 24px 40px', position: 'relative', overflow: 'hidden'
+        position: 'relative',
+        height: '200px',
+        overflow: 'hidden',
+        borderBottom: '1px solid rgba(255,255,255,0.2)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
       }}>
+
+        {/* 背景视频 */}
+        <video
+          autoPlay muted loop playsInline
+          style={{
+            position: 'absolute',
+            top: 0, left: 0,
+            width: '100%', height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center 70%',
+            zIndex: 0,
+            pointerEvents: 'none',
+          }}
+        >
+          <source src="/videos/City.mp4" type="video/mp4" />
+        </video>
+
+        {/* 深色遮罩 */}
         <div style={{
-          position: 'absolute', top: '-40px', right: '-40px',
-          width: '180px', height: '180px', borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(253,186,116,0.35) 0%, transparent 70%)',
-          pointerEvents: 'none'
+          position: 'absolute', inset: 0, zIndex: 1,
+          background: 'rgba(26, 5, 0, 0.50)',
+          pointerEvents: 'none',
         }} />
-        <div style={{ maxWidth: '680px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          <h1 style={{
-            color: '#fff', fontSize: '28px', fontWeight: 700,
-            fontFamily: 'Georgia, serif', marginBottom: '6px'
-          }}>
-            My Cities
-          </h1>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px' }}>
-            Track UV levels across up to 3 locations
-          </p>
+
+        {/* 底部渐变过渡 */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          height: '60px', zIndex: 2,
+          background: 'linear-gradient(transparent, rgba(0,0,0,0.2))',
+          pointerEvents: 'none',
+        }} />
+
+        {/* 内容层 */}
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 3,
+          display: 'flex', alignItems: 'flex-end',
+          padding: '0 24px 24px',
+        }}>
+          <div style={{ maxWidth: '680px', margin: '0 auto', width: '100%' }}>
+            <h1 style={{
+              color: '#fff',
+              fontSize: '28px',
+              fontWeight: 700,
+              fontFamily: 'Georgia, serif',
+              marginBottom: '6px',
+              textShadow: '0 2px 8px rgba(0,0,0,0.4)',
+            }}>
+              My Cities
+            </h1>
+            <p style={{
+              color: 'rgba(255,255,255,0.65)',
+              fontSize: '13px',
+              textShadow: '0 1px 4px rgba(0,0,0,0.3)',
+            }}>
+              Track UV levels across up to 3 locations
+            </p>
+          </div>
         </div>
       </div>
 
@@ -250,7 +292,6 @@ export default function Cities() {
             <p style={{ fontSize: '13px', color: '#dc2626', marginTop: '10px' }}>{searchErr}</p>
           )}
 
-          {/* 搜索结果列表 */}
           {results.length > 0 && (
             <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {results.map(r => {
@@ -295,7 +336,7 @@ export default function Cities() {
               textAlign: 'center', border: '1px solid #f3f4f6',
               boxShadow: '0 2px 12px rgba(0,0,0,0.06)'
             }}>
-              <p style={{ fontSize: '32px', marginBottom: '12px' }}>🌏</p>
+              <p style={{ fontSize: '32px', marginBottom: '12px' }}>🏙️</p>
               <p style={{ fontSize: '15px', color: '#6b7280', fontWeight: 500 }}>No cities added yet</p>
               <p style={{ fontSize: '13px', color: '#9ca3af', marginTop: '4px' }}>
                 Search above to add your first city
@@ -306,8 +347,8 @@ export default function Cities() {
           {cities.map(city => {
             const uv       = uvDataMap[city.id]
             const theme    = uv ? getUVTheme(uv.uvIndex) : null
-            const icon     = uv ? getWeatherIcon(uv.weatherCode) : '🌤️'
-            const desc     = uv ? getWeatherDesc(uv.weatherCode) : ''
+            const icon     = uv ? getWeatherIcon(uv.weatherLabel) : '🌤️'
+            const desc     = uv ? getWeatherDesc(uv.weatherLabel) : ''
             const active   = city.id === selectedId
             const deleting = city.id === deletingId
 
@@ -329,7 +370,6 @@ export default function Cities() {
                   position: 'relative', overflow: 'hidden'
                 }}
               >
-                {/* 选中指示条 */}
                 {active && (
                   <div style={{
                     position: 'absolute', left: 0, top: 0, bottom: 0,
@@ -338,7 +378,6 @@ export default function Cities() {
                 )}
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  {/* 左：城市信息 */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                     <span style={{ fontSize: '32px', lineHeight: 1 }}>{icon}</span>
                     <div>
@@ -361,10 +400,12 @@ export default function Cities() {
                     </div>
                   </div>
 
-                  {/* 右：UV + 删除 */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {uv && theme && (
-                      <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', gap: '2px' }}>
+                      <div style={{
+                        textAlign: 'right', display: 'flex', flexDirection: 'column',
+                        alignItems: 'flex-end', justifyContent: 'center', gap: '2px'
+                      }}>
                         <p style={{
                           fontSize: '10px', color: '#9ca3af',
                           textTransform: 'uppercase', letterSpacing: '0.06em'
@@ -406,10 +447,8 @@ export default function Cities() {
           </p>
         )}
 
-        {/* ── 信息卡片区 ── */}
+        {/* ── 提示卡片 ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px' }}>
-
-          {/* 提示卡片 */}
           <div style={{
             borderRadius: '16px', padding: '16px 20px',
             background: '#fffbeb', border: '1px solid #fde68a',
@@ -420,8 +459,8 @@ export default function Cities() {
               UV levels vary significantly across Australia. Cities in Queensland and the Northern Territory regularly reach <strong>Extreme (11+)</strong> levels. Always check the local UV Index before heading outdoors, especially if you're travelling between cities.
             </p>
           </div>
-
         </div>
+
       </div>
     </div>
   )

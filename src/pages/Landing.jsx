@@ -49,20 +49,34 @@ export default function Landing() {
         width: '100%',
         height: '100vh',
         overflow: 'hidden',
-        backgroundImage: 'url(/images/bac_4.png)',
-        backgroundSize: 'cover',
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: loaded ? '50% 14%' : 'top',
-        transition: 'background-position 1.6s ease-out',
+        background: '#000',
         fontFamily: '"Inter", sans-serif',
       }}
     >
+      {/* ── 背景视频 ── */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        style={{
+          position: 'absolute',
+          top: 0, left: 0,
+          width: '100%', height: '100%',
+          objectFit: 'cover',
+          zIndex: 0,
+          pointerEvents: 'none',
+        }}
+      >
+        <source src="/images/bac_0.mp4" type="video/mp4" />
+      </video>
+
       {/* 底部渐变遮罩 */}
       <div style={{
         position: 'absolute',
         top: 0, bottom: 0, right: 0, left: 0,
         background: 'linear-gradient(transparent 50%, rgb(0,0,0))',
-        zIndex: 0,
+        zIndex: 1,
         pointerEvents: 'none',
       }} />
 
@@ -102,7 +116,7 @@ export default function Landing() {
         </nav>
       </header>
 
-      {/* ── 标题区域 zIndex=3（在bac_3/bac_2之上，bac_2_2/bac_1之下）── */}
+      {/* ── 标题区域 zIndex=3 ── */}
       <div style={{
         position: 'absolute',
         top: '40%',
@@ -115,24 +129,24 @@ export default function Landing() {
       }}>
         {/* 顶部 Logo */}
         <div style={{
-            display: 'flex', justifyContent: 'center', alignItems: 'center',
-            gap: '8px', marginBottom: '20px',
-            opacity: loaded ? 1 : 0,
-            transform: loaded ? 'translateY(0)' : 'translateY(500px)',
-            transition: 'opacity 1s ease, transform 1s ease',
+          display: 'flex', justifyContent: 'center', alignItems: 'center',
+          gap: '8px', marginBottom: '20px',
+          opacity: loaded ? 1 : 0,
+          transform: loaded ? 'translateY(0)' : 'translateY(500px)',
+          transition: 'opacity 1s ease, transform 1s ease',
         }}>
-        <div style={{
+          <div style={{
             width: '44px', height: '44px', borderRadius: '50%',
             background: 'linear-gradient(135deg, #fcd34d, #f97316)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '22px', boxShadow: '0 4px 20px rgba(249,115,22,0.6)'
-        }}>☀</div>
-        <span style={{
+          }}>☀</div>
+          <span style={{
             color: 'rgba(255,255,255,0.9)', fontSize: '20px',
             fontWeight: 500, letterSpacing: '5px', textTransform: 'uppercase'
-        }}>
+          }}>
             Sun<span style={{ color: '#fcd34d' }}>Guard</span>
-        </span>
+          </span>
         </div>
 
         {/* 副标题 */}
@@ -169,75 +183,7 @@ export default function Landing() {
         </h1>
       </div>
 
-      {/* ── bac_3 中景 zIndex=1（标题之下）── */}
-      <img
-        src="/images/bac_3.png"
-        alt=""
-        style={{
-          position: 'absolute',
-          bottom: '-12%',
-          left: 0,
-          width: '100%',
-          zIndex: 1,
-          pointerEvents: 'none',
-          opacity: loaded ? 1 : 0,
-          transform: loaded ? 'translateY(0)' : 'translateY(200px)',
-          transition: 'opacity 1.5s ease, transform 1.5s ease',
-        }}
-      />
-
-      {/* ── bac_2 近景主树林 zIndex=2（标题之下）── */}
-      <img
-        src="/images/bac_2.png"
-        alt=""
-        style={{
-          position: 'absolute',
-          bottom: '-12%',
-          left: 0,
-          width: '100%',
-          zIndex: 2,
-          pointerEvents: 'none',
-          opacity: loaded ? 1 : 0,
-          transform: loaded ? 'translateY(0)' : 'translateY(200px)',
-          transition: 'opacity 1.1s ease, transform 1.1s ease',
-        }}
-      />
-
-      {/* ── bac_2_2 zIndex=4（标题之上）── */}
-      <img
-        src="/images/bac_2_2.png"
-        alt=""
-        style={{
-          position: 'absolute',
-          bottom: '-12%',
-          left: 0,
-          width: '100%',
-          zIndex: 4,
-          pointerEvents: 'none',
-          opacity: loaded ? 1 : 0,
-          transform: loaded ? 'translateY(0)' : 'translateY(200px)',
-          transition: 'opacity 1.3s ease, transform 1.3s ease',
-        }}
-      />
-
-      {/* ── bac_1 最近景 zIndex=5（标题之上）── */}
-      <img
-        src="/images/bac_1.png"
-        alt=""
-        style={{
-          position: 'absolute',
-          bottom: '-12%',
-          left: 0,
-          width: '100%',
-          zIndex: 5,
-          pointerEvents: 'none',
-          opacity: loaded ? 1 : 0,
-          transform: loaded ? 'translateY(0)' : 'translateY(200px)',
-          transition: 'opacity 1s ease, transform 1s ease',
-        }}
-      />
-
-      {/* ── 描述文字 zIndex=6（所有图层之上）── */}
+      {/* ── 描述文字 zIndex=6 ── */}
       <div style={{
         width: '100%',
         display: 'flex',
