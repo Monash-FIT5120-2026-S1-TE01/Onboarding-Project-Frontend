@@ -30,7 +30,7 @@ const DEFAULT_CITIES = [
 
 // ── 真实 API 请求 ─────────────────────────────────────────────
 async function fetchCityUV(cityName, timezone) {
-  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/update_status`, {
+  const res = await fetch('https://uv-level-monitor-anb3fvckcsfcf4a3.australiaeast-01.azurewebsites.net/update_status', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
