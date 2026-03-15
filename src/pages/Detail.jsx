@@ -460,7 +460,7 @@ export default function Detail() {
   // 图表几何数据
   const chart = useMemo(() => {
     const trendData = data?.uvTrend ?? []
-    return buildChartGeometry(data.uvTrend, 920, 360, 12)
+    return buildChartGeometry(trendData, 920, 360, 12)
   }, [data?.uvTrend])
 
 
