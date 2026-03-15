@@ -30,7 +30,6 @@ const SUPPORTED_CITIES = [
 // 说明：
 // 为了保证代码风格统一，这里也先沿用相同方式。
 // 后续如果统一切换 Azure 地址，只需要改这里这一行。
-const DETAIL_API_URL = 'http://127.0.0.1:8000/update_status'
 
 // ── 获取城市对应 timezone ─────────────────────────────────────────────
 function getTimezone(cityName) {
@@ -433,7 +432,7 @@ export default function Detail() {
     setLoading(true)
     setError(null)
 
-    fetch('http://127.0.0.1:8000/update_status', {
+    fetch('https://uv-level-monitor-anb3fvckcsfcf4a3.australiaeast-01.azurewebsites.net/update_status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
