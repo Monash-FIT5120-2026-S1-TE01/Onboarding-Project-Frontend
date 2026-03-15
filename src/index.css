@@ -34,7 +34,7 @@ body {
   background: #ffffff;
 }
 
-/* 毛玻璃卡片 */
+/* Translucent card */
 .glass-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
@@ -55,7 +55,7 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
-/* 橙色主按钮 */
+/* Orange main button */
 .btn-primary {
   background: linear-gradient(135deg, var(--orange), var(--orange-dark));
   color: white;
@@ -77,19 +77,19 @@ body {
   transform: translateY(0);
 }
 
-/* Display 字体用于标题 */
+/* Display font used for the title */
 .font-display {
   font-family: 'Playfair Display', serif;
 }
 
-/* UV 等级颜色 */
+/* UV grade color */
 .uv-low      { color: #16a34a; }
 .uv-moderate { color: #d97706; }
 .uv-high     { color: #ea580c; }
 .uv-veryhigh { color: #dc2626; }
 .uv-extreme  { color: #7c3aed; }
 
-/* 页面淡入动画 */
+/* Page fade-in animation */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
