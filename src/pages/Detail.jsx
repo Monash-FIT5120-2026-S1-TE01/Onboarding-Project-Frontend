@@ -461,7 +461,7 @@ export default function Detail() {
   const chart = useMemo(() => {
     const trendData = data?.uvTrend ?? []
     return buildChartGeometry(data.uvTrend, 920, 360, 12)
-  }, [data.uvTrend])
+  }, [data?.uvTrend])
 
 
   
