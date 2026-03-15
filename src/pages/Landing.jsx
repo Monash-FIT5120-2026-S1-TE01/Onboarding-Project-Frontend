@@ -53,19 +53,25 @@ export default function Landing() {
         fontFamily: '"Inter", sans-serif',
       }}
     >
+      <style>{`
+        @media (max-width: 768px) {
+          .landing-title { font-size: clamp(4rem, 16vw, 8rem) !important; margin: -8px 0 !important; letter-spacing: 4px !important; }
+          .landing-subtitle { font-size: 0.85rem !important; letter-spacing: 4px !important; }
+          .landing-desc { width: 88% !important; font-size: 13px !important; }
+          .landing-logo span { font-size: 15px !important; letter-spacing: 3px !important; }
+          .landing-logo div { width: 36px !important; height: 36px !important; font-size: 18px !important; }
+          .landing-content { top: 38% !important; }
+          .landing-btn { width: 240px !important; font-size: 13px !important; height: 44px !important; }
+        }
+      `}</style>
+
       {/* ── 背景视频 ── */}
       <video
-        autoPlay
-        muted
-        loop
-        playsInline
+        autoPlay muted loop playsInline
         style={{
-          position: 'absolute',
-          top: 0, left: 0,
+          position: 'absolute', top: 0, left: 0,
           width: '100%', height: '100%',
-          objectFit: 'cover',
-          zIndex: 0,
-          pointerEvents: 'none',
+          objectFit: 'cover', zIndex: 0, pointerEvents: 'none',
         }}
       >
         <source src="/images/bac_0.mp4" type="video/mp4" />
@@ -73,37 +79,27 @@ export default function Landing() {
 
       {/* 底部渐变遮罩 */}
       <div style={{
-        position: 'absolute',
-        top: 0, bottom: 0, right: 0, left: 0,
+        position: 'absolute', top: 0, bottom: 0, right: 0, left: 0,
         background: 'linear-gradient(transparent 50%, rgb(0,0,0))',
-        zIndex: 1,
-        pointerEvents: 'none',
+        zIndex: 1, pointerEvents: 'none',
       }} />
 
-      {/* ── 顶部导航 zIndex=10 ── */}
+      {/* ── 顶部导航 ── */}
       <header style={{
-        position: 'absolute',
-        top: 0,
-        zIndex: 10,
-        width: '100%',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
+        position: 'absolute', top: 0, zIndex: 10,
+        width: '100%', display: 'flex',
+        justifyContent: 'center', alignItems: 'center',
         opacity: loaded ? 1 : 0,
         transform: loaded ? 'translateY(0)' : 'translateY(-100%)',
         transition: 'opacity 1.2s ease, transform 1.2s ease',
       }}>
         <nav style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
+          display: 'flex', alignItems: 'center', gap: '4px',
           padding: '0 8px',
           backgroundColor: 'rgba(255,255,255,0.2)',
           height: '54px',
-          borderBottomLeftRadius: '20px',
-          borderBottomRightRadius: '20px',
-          backdropFilter: 'blur(5px)',
-          WebkitBackdropFilter: 'blur(5px)',
+          borderBottomLeftRadius: '20px', borderBottomRightRadius: '20px',
+          backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)',
           boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
         }}>
           {[
@@ -116,25 +112,29 @@ export default function Landing() {
         </nav>
       </header>
 
-      {/* ── 标题区域 zIndex=3 ── */}
-      <div style={{
-        position: 'absolute',
-        top: '40%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        textAlign: 'center',
-        zIndex: 3,
-        width: '100%',
-        pointerEvents: 'none',
-      }}>
-        {/* 顶部 Logo */}
-        <div style={{
-          display: 'flex', justifyContent: 'center', alignItems: 'center',
-          gap: '8px', marginBottom: '20px',
-          opacity: loaded ? 1 : 0,
-          transform: loaded ? 'translateY(0)' : 'translateY(500px)',
-          transition: 'opacity 1s ease, transform 1s ease',
-        }}>
+      {/* ── 标题区域 ── */}
+      <div
+        className="landing-content"
+        style={{
+          position: 'absolute',
+          top: '40%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          textAlign: 'center',
+          zIndex: 3, width: '100%',
+          pointerEvents: 'none',
+        }}
+      >
+        {/* Logo */}
+        <div
+          className="landing-logo"
+          style={{
+            display: 'flex', justifyContent: 'center', alignItems: 'center',
+            gap: '8px', marginBottom: '16px',
+            opacity: loaded ? 1 : 0,
+            transform: loaded ? 'translateY(0)' : 'translateY(500px)',
+            transition: 'opacity 1s ease, transform 1s ease',
+          }}
+        >
           <div style={{
             width: '44px', height: '44px', borderRadius: '50%',
             background: 'linear-gradient(135deg, #fcd34d, #f97316)',
@@ -150,102 +150,90 @@ export default function Landing() {
         </div>
 
         {/* 副标题 */}
-        <h3 style={{
-          fontSize: '1.5rem',
-          fontWeight: 400,
-          letterSpacing: '15px',
-          color: 'rgba(255,255,255,0.75)',
-          textAlign: 'center',
-          textTransform: 'uppercase',
-          margin: 0,
-          opacity: loaded ? 1 : 0,
-          transform: loaded ? 'translateY(0)' : 'translateY(500px)',
-          transition: 'opacity 1s ease, transform 1s ease',
-        }}>
+        <h3
+          className="landing-subtitle"
+          style={{
+            fontSize: '1.5rem', fontWeight: 400,
+            letterSpacing: '15px',
+            color: 'rgba(255,255,255,0.75)',
+            textAlign: 'center', textTransform: 'uppercase',
+            margin: '0 0 4px',
+            opacity: loaded ? 1 : 0,
+            transform: loaded ? 'translateY(0)' : 'translateY(500px)',
+            transition: 'opacity 1s ease, transform 1s ease',
+          }}
+        >
           Your Daily UV Protection Companion
         </h3>
 
         {/* 主标题 */}
-        <h1 style={{
-          fontSize: '15rem',
-          fontWeight: 800,
-          letterSpacing: '20px',
-          fontFamily: 'Georgia, serif',
-          margin: '-20px 0',
-          lineHeight: 1,
-          textAlign: 'center',
-          opacity: loaded ? 1 : 0,
-          transform: loaded ? 'translateY(0)' : 'translateY(500px)',
-          transition: 'opacity 1.2s ease 0.1s, transform 1.2s ease 0.1s',
-        }}>
+        <h1
+          className="landing-title"
+          style={{
+            fontSize: '15rem', fontWeight: 800,
+            letterSpacing: '20px',
+            fontFamily: 'Georgia, serif',
+            margin: '-20px 0', lineHeight: 1,
+            textAlign: 'center',
+            opacity: loaded ? 1 : 0,
+            transform: loaded ? 'translateY(0)' : 'translateY(500px)',
+            transition: 'opacity 1.2s ease 0.1s, transform 1.2s ease 0.1s',
+          }}
+        >
           <span style={{ color: '#ffffff' }}>Sun</span>
           <span style={{ color: '#fcd34d' }}>Guard</span>
         </h1>
       </div>
 
-      {/* ── 描述文字 zIndex=6 ── */}
+      {/* ── 描述文字 ── */}
       <div style={{
-        width: '100%',
-        display: 'flex',
-        justifyContent: 'center',
-        position: 'absolute',
-        bottom: '18%',
-        zIndex: 6,
+        width: '100%', display: 'flex', justifyContent: 'center',
+        position: 'absolute', bottom: '18%', zIndex: 6,
         opacity: loaded ? 1 : 0,
         transform: loaded ? 'translateY(0)' : 'translateY(500px)',
         transition: 'opacity 1.2s ease 0.2s, transform 1.2s ease 0.2s',
       }}>
-        <p style={{
-          fontSize: '14px',
-          fontWeight: 300,
-          letterSpacing: '1px',
-          lineHeight: 1.8,
-          color: 'rgba(255,255,255,0.7)',
-          width: '45%',
-          textAlign: 'center',
-          fontStyle: 'italic',
-          textShadow: '0 1px 5px rgba(0,0,0,0.2)',
-          margin: 0,
-        }}>
+        <p
+          className="landing-desc"
+          style={{
+            fontSize: '14px', fontWeight: 300,
+            letterSpacing: '1px', lineHeight: 1.8,
+            color: 'rgba(255,255,255,0.7)',
+            width: '45%', textAlign: 'center',
+            fontStyle: 'italic',
+            textShadow: '0 1px 5px rgba(0,0,0,0.2)',
+            margin: 0,
+          }}
+        >
           Powered by WHO UV Index standards and real-time Australian meteorological data —
           SunGuard helps you monitor, understand, and respond to UV radiation levels,
           so you and your family can stay sun-safe, every day, anywhere across Australia.
         </p>
       </div>
 
-      {/* ── CTA 按钮 zIndex=6 ── */}
+      {/* ── CTA 按钮 ── */}
       <div style={{
-        position: 'absolute',
-        bottom: '8%',
-        display: 'flex',
-        justifyContent: 'center',
-        width: '100%',
-        zIndex: 6,
+        position: 'absolute', bottom: '8%',
+        display: 'flex', justifyContent: 'center',
+        width: '100%', zIndex: 6,
         opacity: loaded ? 1 : 0,
         transform: loaded ? 'translateY(0)' : 'translateY(500px)',
         transition: 'opacity 1.2s ease 0.3s, transform 1.2s ease 0.3s',
       }}>
         <button
+          className="landing-btn"
           onClick={() => navigate('/home')}
           onMouseEnter={() => setBtnHovered(true)}
           onMouseLeave={() => setBtnHovered(false)}
           style={{
-            fontSize: '16px',
-            fontWeight: 400,
-            letterSpacing: '3px',
-            textTransform: 'uppercase',
+            fontSize: '16px', fontWeight: 400,
+            letterSpacing: '3px', textTransform: 'uppercase',
             color: btnHovered ? 'rgb(53,53,53)' : 'rgba(255,255,255,0.8)',
             backgroundColor: btnHovered ? 'rgba(255,255,255,0.85)' : 'transparent',
             border: '1px solid rgba(255,255,255,0.8)',
-            borderRadius: '50px',
-            height: '50px',
-            width: '300px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            transition: 'all 0.2s',
-            cursor: 'pointer',
+            borderRadius: '50px', height: '50px', width: '300px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: '8px', transition: 'all 0.2s', cursor: 'pointer',
           }}
         >
           <span>Check Now</span>
