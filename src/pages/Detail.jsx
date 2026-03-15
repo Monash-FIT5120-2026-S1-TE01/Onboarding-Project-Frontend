@@ -505,7 +505,6 @@ export default function Detail() {
                 ))}
               </div>
 
-              <div style={{ marginTop: '14px', width: '200px', height: '6px', borderRadius: '999px', background: 'linear-gradient(90deg, #67d4ff 0%, #8b5cf6 45%, #ec4899 100%)' }} />
             </div>
 
             {/* Right description */}
