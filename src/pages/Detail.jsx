@@ -429,6 +429,7 @@ export default function Detail() {
     const cityName = city?.name ?? 'Melbourne'
     const timezone = city?.timezone ?? getTimezone(cityName)
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     setError(null)
 

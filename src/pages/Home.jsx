@@ -24,7 +24,7 @@ const SUPPORTED_CITIES = [
   { name: 'Mackay',         timezone: 'Australia/Brisbane'  },
 ]
 
-const CACHE_KEY   = 'sunsense_uv_cache'
+const CACHE_KEY = 'sunsense_uv_cache_home'
 const CACHE_TTL   = 60 * 60 * 1000 // 1 hour in ms
 
 function getTimezone(cityName) {
@@ -183,12 +183,12 @@ export default function Home() {
     const cityName = city?.name ?? 'Melbourne'
     const timezone = city?.timezone ?? getTimezone(cityName)
 
-    // Check cache first
+    // Check cache first — only use if it contains full Home page data
     const cached = getCached(cityId)
-    if (cached) {
-      setData(cached)
-      setLoading(false)
-      return
+    if (cached && cached.safeSunTime !== undefined && cached.cityName) {
+    setData(cached)
+    setLoading(false)
+    return
     }
 
     setLoading(true)
