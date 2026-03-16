@@ -46,9 +46,7 @@ function setCached(cityId, data) {
     cache[cityId] = { ts: Date.now(), data }
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache))
   // eslint-disable-next-line no-unused-vars
-  } catch (err) {
-    // ignore cache errors
-  }
+  } catch (err) { /* ignore */ }
 }
 
 function getTimezone(cityName) {
@@ -84,79 +82,104 @@ function getWeatherInfo(label) {
 
 // ── UV theme ──────────────────────────────────────────────────
 function getUVTheme(uvi) {
-  if (uvi <= 2)  return { label: 'Low',       color: '#4eb400', heroGrad: 'linear-gradient(135deg, #1f3a08 0%, #2f5f13 45%, #4eb400 100%)',      adviceBg: '#f0fdf4', adviceBorder: '#bbf7d0', adviceText: '#166534' }
-  if (uvi <= 5)  return { label: 'Moderate',  color: '#f8b600', heroGrad: 'linear-gradient(135deg, #2f3f9e 0%, #5b3b92 48%, #a61d6b 100%)',      adviceBg: '#fff7ed', adviceBorder: '#fed7aa', adviceText: '#9a3412' }
-  if (uvi <= 7)  return { label: 'High',      color: '#f88700', heroGrad: 'linear-gradient(135deg, #381700 0%, #8b3a09 48%, #f88700 100%)',      adviceBg: '#fff7ed', adviceBorder: '#fdba74', adviceText: '#9a3412' }
-  if (uvi <= 10) return { label: 'Very High', color: '#e82c0e', heroGrad: 'linear-gradient(135deg, #3b0202 0%, #7f1d1d 48%, #e82c0e 100%)',      adviceBg: '#fef2f2', adviceBorder: '#fecaca', adviceText: '#991b1b' }
-  return               { label: 'Extreme',   color: '#b54cff', heroGrad: 'linear-gradient(135deg, #2f0a47 0%, #6b21a8 48%, #b54cff 100%)',      adviceBg: '#faf5ff', adviceBorder: '#e9d5ff', adviceText: '#7e22ce' }
+  if (uvi <= 2)  return { label: 'Low',       color: '#4eb400', heroGrad: 'linear-gradient(135deg, #1f3a08 0%, #2f5f13 45%, #4eb400 100%)',  adviceBg: '#f0fdf4', adviceBorder: '#bbf7d0', adviceText: '#166534' }
+  if (uvi <= 5)  return { label: 'Moderate',  color: '#f8b600', heroGrad: 'linear-gradient(135deg, #2f3f9e 0%, #5b3b92 48%, #a61d6b 100%)',  adviceBg: '#fff7ed', adviceBorder: '#fed7aa', adviceText: '#9a3412' }
+  if (uvi <= 7)  return { label: 'High',      color: '#f88700', heroGrad: 'linear-gradient(135deg, #381700 0%, #8b3a09 48%, #f88700 100%)',  adviceBg: '#fff7ed', adviceBorder: '#fdba74', adviceText: '#9a3412' }
+  if (uvi <= 10) return { label: 'Very High', color: '#e82c0e', heroGrad: 'linear-gradient(135deg, #3b0202 0%, #7f1d1d 48%, #e82c0e 100%)',  adviceBg: '#fef2f2', adviceBorder: '#fecaca', adviceText: '#991b1b' }
+  return               { label: 'Extreme',   color: '#b54cff', heroGrad: 'linear-gradient(135deg, #2f0a47 0%, #6b21a8 48%, #b54cff 100%)',  adviceBg: '#faf5ff', adviceBorder: '#e9d5ff', adviceText: '#7e22ce' }
 }
 
-// ── UV progress bar gradient (WHO 11-color, same as Home) ─────
+// ── UV progress bar gradient ──────────────────────────────────
 const UV_BAR_STOPS = ['#4eb400','#a0ce00','#f7e400','#f8b600','#f88700','#f85900','#e82c0e','#d8001d','#ff0099','#b54cff','#998cff']
 function getBarGradient(uvi) {
   const stopCount = Math.max(2, Math.ceil(Math.min(1, uvi / 11) * UV_BAR_STOPS.length))
   return `linear-gradient(90deg, ${UV_BAR_STOPS.slice(0, stopCount).join(', ')})`
 }
 
-// ── Time formatters ───────────────────────────────────────────
-function formatHeroDateLabel() {
-  const date = new Date()
-  const datePart = date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })
-  const timePart = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()
-  return `${datePart} · ${timePart}`
+// ── Time helpers ──────────────────────────────────────────────
+
+// iso 是后端返回的城市本地时间字符串，如 "2025-03-16T14:00:00"
+// 直接截取小时，不做任何时区转换
+function isoToLocalHour(iso) {
+  return parseInt(iso.slice(11, 13), 10)
 }
 
-function formatHourLabel(isoString) {
-  const date = new Date(isoString.endsWith('Z') ? isoString : isoString + 'Z')
-  const hour = date.getHours()
+// 把本地小时数字转为显示标签，如 0→"12 am", 13→"1 pm"
+function hourToLabel(hour) {
   if (hour === 0)  return '12 am'
   if (hour === 12) return '12 pm'
   return hour < 12 ? `${hour} am` : `${hour - 12} pm`
 }
 
-// eslint-disable-next-line no-unused-vars
-function formatClockTime(isoString) {
-  return new Date(isoString).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false })
+// 获取目标城市当前的本地小时（0-23）
+function getCityCurrentHour(timezone) {
+  try {
+    const str = new Date().toLocaleString('en-AU', {
+      timeZone: timezone,
+      hour: 'numeric',
+      hour12: false,
+    })
+    // en-AU hour12:false 可能返回 "24" 代表 0 点
+    const h = parseInt(str, 10)
+    return h === 24 ? 0 : h
+  } catch {
+    return new Date().getHours()
+  }
 }
 
-// ── Build UV trend from past / current / forecast ─────────────
-function buildTrendData(res) {
-  const map = new Map()
-  function toUtcDate(iso) {
-    return new Date(iso.endsWith('Z') ? iso : iso + 'Z')
+// 获取目标城市今天的日期字符串 "YYYY-MM-DD"
+function getCityTodayDate(timezone) {
+  try {
+    // toLocaleDateString 返回 "16/03/2025"，转为 "2025-03-16"
+    const parts = new Date().toLocaleDateString('en-AU', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).split('/')
+    // parts = ['16', '03', '2025']
+    return `${parts[2]}-${parts[1]}-${parts[0]}`
+  } catch {
+    return new Date().toISOString().slice(0, 10)
   }
+}
+
+// ── Build UV trend data ───────────────────────────────────────
+// 只保留目标城市今天（本地日期）的数据，按小时 0-23 排序
+function buildTrendData(res, cityTimezone) {
+  const todayDate = getCityTodayDate(cityTimezone)
+  const map = new Map()
+
+  function addPoint(iso, value) {
+    // iso 格式: "2025-03-16T14:00:00"
+    // 只保留今天日期的数据点
+    if (!iso || iso.slice(0, 10) !== todayDate) return
+    const hour = isoToLocalHour(iso)
+    // 同一小时只保留最新的（current 覆盖 past/forecast）
+    if (!map.has(hour) || iso === res?.current_uv_index_time?.datetime) {
+      map.set(hour, {
+        iso,
+        hour,
+        time: hourToLabel(hour),
+        value: Number(value ?? 0),
+      })
+    }
+  }
+
   const pastUV = res?.past_uv_index_time?.uv_index ?? []
   const pastDT = res?.past_uv_index_time?.datetime ?? []
-  pastDT.forEach((iso, i) => {
-    map.set(iso, {
-      iso,
-      time: formatHourLabel(iso),
-      value: Number(pastUV[i] ?? 0),
-      _ts: toUtcDate(iso).getTime(),
-    })
-  })
+  pastDT.forEach((iso, i) => addPoint(iso, pastUV[i]))
+
   const currentIso = res?.current_uv_index_time?.datetime
-  const currentUV  = Number(res?.current_uv_index_time?.uv_index ?? 0)
-  if (currentIso) {
-    map.set(currentIso, {
-      iso: currentIso,
-      time: formatHourLabel(currentIso),
-      value: currentUV,
-      _ts: toUtcDate(currentIso).getTime(),
-    })
-  }
+  const currentUV  = res?.current_uv_index_time?.uv_index
+  if (currentIso) addPoint(currentIso, currentUV)
+
   const forecastUV = res?.forecast_uv_index_time?.uv_index ?? []
   const forecastDT = res?.forecast_uv_index_time?.datetime ?? []
-  forecastDT.forEach((iso, i) => {
-    map.set(iso, {
-      iso,
-      time: formatHourLabel(iso),
-      value: Number(forecastUV[i] ?? 0),
-      _ts: toUtcDate(iso).getTime(),
-    })
-  })
+  forecastDT.forEach((iso, i) => addPoint(iso, forecastUV[i]))
 
-  return Array.from(map.values()).sort((a, b) => a._ts - b._ts)
+  // 按小时 0→23 排序，保证横轴从早到晚
+  return Array.from(map.values()).sort((a, b) => a.hour - b.hour)
 }
 
 function getPeakAndLowest(uvTrend) {
@@ -166,7 +189,10 @@ function getPeakAndLowest(uvTrend) {
     if (item.value > peak.value) peak = item
     if (item.value < lowest.value) lowest = item
   })
-  return { peakUV: Math.round(peak.value), peakTime: peak.time, lowestUV: Math.round(lowest.value), lowestTime: lowest.time }
+  return {
+    peakUV: Math.round(peak.value), peakTime: peak.time,
+    lowestUV: Math.round(lowest.value), lowestTime: lowest.time,
+  }
 }
 
 function buildNowSummary(currentUV, uvTrend) {
@@ -177,13 +203,13 @@ function buildNowSummary(currentUV, uvTrend) {
   return `UV is currently ${label}. Levels of Moderate or higher are expected from ${mod[0].time} to ${mod[mod.length - 1].time} today.`
 }
 
-// ── Protection advice (3 cases: 0 / 30 / 50) ─────────────────
+// ── Protection advice ─────────────────────────────────────────
 function buildProtectionAdvice(spf, usage) {
   if (!spf || spf === 0) {
     return {
       spfCase: 'none',
       title: 'No Sunscreen Needed',
-      description: 'UV levels are currently low — sun protection is not required at this time. That said, it\'s always good to stay mindful of your skin health.',
+      description: "UV levels are currently low — sun protection is not required at this time. That said, it's always good to stay mindful of your skin health.",
       tips: [
         '🌿 Seek shade during midday hours, even when UV is low.',
         '💧 Stay well-hydrated throughout the day — sun and heat can dehydrate you quickly.',
@@ -194,16 +220,14 @@ function buildProtectionAdvice(spf, usage) {
       recommendedAmount: [],
     }
   }
-
   const faceNeckTsp = usage?.face_neck?.teaspon ?? '~1'
   const armLegTsp   = usage?.arm_leg?.teaspon   ?? '~2'
   const totalMl     = usage?.total?.ml           ?? '~30'
-
   if (spf >= 50) {
     return {
       spfCase: '50',
       title: 'SPF 50+ Recommended',
-      description: `UV levels are high. Use a broad-spectrum SPF 50+ sunscreen for maximum protection. Apply generously 20 minutes before going outdoors and reapply every 2 hours, or immediately after swimming or sweating. SPF 50+ significantly reduces your risk of sunburn and long-term skin damage.`,
+      description: 'UV levels are high. Use a broad-spectrum SPF 50+ sunscreen for maximum protection. Apply generously 20 minutes before going outdoors and reapply every 2 hours, or immediately after swimming or sweating.',
       recommendedAmount: [
         `Face & neck: ${faceNeckTsp} teaspoon`,
         `Arms & legs: ${armLegTsp} teaspoons`,
@@ -211,11 +235,10 @@ function buildProtectionAdvice(spf, usage) {
       ],
     }
   }
-
   return {
     spfCase: '30',
     title: 'SPF 30+ Recommended',
-    description: `Use a broad-spectrum SPF 30+ sunscreen. Apply 20 minutes before outdoor exposure and reapply every 2 hours, or after swimming or sweating. SPF 30 blocks approximately 97% of UVB rays and is suitable for most everyday outdoor activities.`,
+    description: 'Use a broad-spectrum SPF 30+ sunscreen. Apply 20 minutes before outdoor exposure and reapply every 2 hours, or after swimming or sweating. SPF 30 blocks approximately 97% of UVB rays.',
     recommendedAmount: [
       `Face & neck: ${faceNeckTsp} teaspoon`,
       `Arms & legs: ${armLegTsp} teaspoons`,
@@ -229,10 +252,10 @@ function buildOutfitAdvice(suggCloth, weatherLabel, temperature, currentUV) {
   const noSuggestion = !suggCloth || suggCloth.trim() === '' || suggCloth.trim().toLowerCase() === 'no suggestion.'
   let description = noSuggestion ? '' : suggCloth
   if (noSuggestion) {
-    if (currentUV >= 6)                                    description = 'UV levels are high today. Lightweight long sleeves, sunglasses, and a wide-brim hat are recommended for better protection outdoors.'
-    else if (temperature >= 26)                            description = 'It is warm outside. Choose breathable clothing and bring sunglasses and a hat for additional sun protection.'
+    if (currentUV >= 6)                                     description = 'UV levels are high today. Lightweight long sleeves, sunglasses, and a wide-brim hat are recommended for better protection outdoors.'
+    else if (temperature >= 26)                             description = 'It is warm outside. Choose breathable clothing and bring sunglasses and a hat for additional sun protection.'
     else if (weatherLabel.toLowerCase().includes('cloudy')) description = 'It may look cloudy, but UV can still affect exposed skin. Light layers and a hat are a good choice.'
-    else                                                    description = 'Dress comfortably for today\'s conditions, and consider sunglasses or a hat during outdoor exposure.'
+    else                                                    description = "Dress comfortably for today's conditions, and consider sunglasses or a hat during outdoor exposure."
   }
   const tags = []
   if (temperature >= 26)                               tags.push('#WarmWeather')
@@ -242,12 +265,24 @@ function buildOutfitAdvice(suggCloth, weatherLabel, temperature, currentUV) {
   return { title: 'Sun-Smart Casual', tags, description }
 }
 
+// ── Hero date label using city timezone ───────────────────────
+function formatHeroDateLabel(cityTimezone) {
+  const now = new Date()
+  const datePart = now.toLocaleDateString('en-AU', {
+    timeZone: cityTimezone,
+    weekday: 'short', day: 'numeric', month: 'short',
+  })
+  const timePart = now.toLocaleTimeString('en-AU', {
+    timeZone: cityTimezone,
+    hour: '2-digit', minute: '2-digit', hour12: true,
+  }).toLowerCase()
+  return `${datePart} · ${timePart}`
+}
+
 // ── Map API response → page data ──────────────────────────────
-function mapResponse(res, cityName) {
-  const uvTrend      = buildTrendData(res)
+function mapResponse(res, cityName, cityTimezone) {
+  const uvTrend      = buildTrendData(res, cityTimezone)
   const currentUV    = Number(res?.current_uv_index_time?.uv_index ?? 0)
-  // eslint-disable-next-line no-unused-vars
-  const currentISO   = res?.current_uv_index_time?.datetime ?? null
   const weatherLabel = parseWeatherLabel(res?.weather_label)
   const temperature  = Number(res?.temperature ?? 0)
   const spf          = Number(res?.spf ?? 0)
@@ -255,9 +290,11 @@ function mapResponse(res, cityName) {
   const { peakUV, peakTime, lowestUV, lowestTime } = getPeakAndLowest(uvTrend)
 
   return {
-    cityName: cityName || 'Melbourne',
-    dateLabel: formatHeroDateLabel(),
-    currentUV, uvLabel: getUVTheme(currentUV).label,
+    cityName:    cityName || 'Melbourne',
+    cityTimezone,
+    dateLabel:   formatHeroDateLabel(cityTimezone),
+    currentUV,
+    uvLabel:     getUVTheme(currentUV).label,
     peakUV, peakTime, lowestUV, lowestTime,
     nowSummary:       buildNowSummary(currentUV, uvTrend),
     protectionAdvice: buildProtectionAdvice(spf, usage),
@@ -270,7 +307,10 @@ function mapResponse(res, cityName) {
 const CHART_W = 920, CHART_H = 360, CHART_PAD = { top: 18, right: 18, bottom: 28, left: 18 }
 
 function buildChartGeometry(data) {
-  const safeData = data.length > 1 ? data : [{ time: '12 AM', value: 0, iso: 'f1' }, { time: '1 AM', value: 0, iso: 'f2' }]
+  const safeData = data.length > 1 ? data : [
+    { time: '12 am', value: 0, iso: 'f1', hour: 0 },
+    { time: '11 pm', value: 0, iso: 'f2', hour: 23 },
+  ]
   const innerW = CHART_W - CHART_PAD.left - CHART_PAD.right
   const innerH = CHART_H - CHART_PAD.top  - CHART_PAD.bottom
   const points = safeData.map((item, i) => ({
@@ -279,28 +319,30 @@ function buildChartGeometry(data) {
     y: CHART_PAD.top  + innerH - (item.value / 12) * innerH,
   }))
   const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
-  const areaPath = [`M ${points[0].x} ${CHART_H - CHART_PAD.bottom}`, ...points.map(p => `L ${p.x} ${p.y}`), `L ${points[points.length - 1].x} ${CHART_H - CHART_PAD.bottom}`, 'Z'].join(' ')
+  const areaPath = [
+    `M ${points[0].x} ${CHART_H - CHART_PAD.bottom}`,
+    ...points.map(p => `L ${p.x} ${p.y}`),
+    `L ${points[points.length - 1].x} ${CHART_H - CHART_PAD.bottom}`,
+    'Z',
+  ].join(' ')
   return { points, linePath, areaPath }
 }
 
 // ── Interactive UV Chart ──────────────────────────────────────
 function UVChart({ chart, nowPoint }) {
-  const svgRef   = useRef(null)
-  const [hover, setHover] = useState(null) // { x, y, value, time }
+  const svgRef = useRef(null)
+  const [hover, setHover] = useState(null)
 
   const getHoverFromEvent = useCallback((e) => {
-    const svg  = svgRef.current
+    const svg = svgRef.current
     if (!svg) return
     const rect = svg.getBoundingClientRect()
     const clientX = e.touches ? e.touches[0].clientX : e.clientX
     const svgX = ((clientX - rect.left) / rect.width) * CHART_W
-
     if (svgX < CHART_PAD.left || svgX > CHART_W - CHART_PAD.right) {
       setHover(null)
       return
     }
-
-    // Find closest point
     let closest = chart.points[0]
     let minDist = Infinity
     chart.points.forEach(p => {
@@ -363,7 +405,7 @@ function UVChart({ chart, nowPoint }) {
         <path d={chart.areaPath} fill="url(#uvAreaGradient)" />
         <path d={chart.linePath} fill="none" stroke="url(#uvLineGradient)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
 
-        {/* Current time indicator (hidden when hovering) */}
+        {/* Current time indicator */}
         {!hover && (
           <>
             <line x1={nowPoint.x} x2={nowPoint.x} y1={CHART_PAD.top} y2={CHART_H - CHART_PAD.bottom} stroke="rgba(255,255,255,0.45)" strokeWidth="2" />
@@ -395,20 +437,11 @@ function UVChart({ chart, nowPoint }) {
       {/* Hover tooltip */}
       {hover && (
         <div style={{
-          position: 'absolute',
-          top: '12px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'rgba(30,30,40,0.92)',
-          border: '1px solid rgba(255,255,255,0.15)',
-          borderRadius: '10px',
-          padding: '6px 14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          pointerEvents: 'none',
-          whiteSpace: 'nowrap',
-          backdropFilter: 'blur(8px)',
+          position: 'absolute', top: '12px', left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(30,30,40,0.92)', border: '1px solid rgba(255,255,255,0.15)',
+          borderRadius: '10px', padding: '6px 14px',
+          display: 'flex', alignItems: 'center', gap: '10px',
+          pointerEvents: 'none', whiteSpace: 'nowrap', backdropFilter: 'blur(8px)',
         }}>
           <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>{hover.time}</span>
           <span style={{ fontSize: '15px', fontWeight: 700, color: getUVTheme(hover.value).color }}>UV {hover.value}</span>
@@ -451,7 +484,7 @@ export default function Detail() {
     })
       .then(r => { if (!r.ok) throw new Error('API error'); return r.json() })
       .then(res => {
-        const mapped = mapResponse(res, cityName)
+        const mapped = mapResponse(res, cityName, timezone)
         setCached(cityId, mapped)
         setData(mapped)
         setLoading(false)
@@ -482,19 +515,22 @@ export default function Detail() {
     </div>
   )
 
-  const theme   = getUVTheme(data.currentUV)
-  const weather = getWeatherInfo(data.weatherLabel)
+  const theme     = getUVTheme(data.currentUV)
+  const weather   = getWeatherInfo(data.weatherLabel)
   const uvDisplay = Math.round(data.currentUV)
   const uvBarW    = `${Math.min(100, (data.currentUV / 11) * 100)}%`
 
-  const realNow = new Date()
-  const realTimeStr = realNow.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
-  const nowTs = realNow.getTime()
+  // 用目标城市时区获取当前小时，与 iso 截取的本地小时对齐
+  const cityCurrentHour = getCityCurrentHour(data.cityTimezone)
+  const realTimeStr = new Date().toLocaleTimeString('en-AU', {
+    timeZone: data.cityTimezone,
+    hour: '2-digit', minute: '2-digit',
+  })
 
+  // 找最接近城市当前小时的数据点
   const nowIdx = data.uvTrend.reduce((bestIdx, item, i) => {
-    if (!item._ts) return bestIdx
-    const diff = Math.abs(item._ts - nowTs)
-    const bestDiff = bestIdx >= 0 ? Math.abs(data.uvTrend[bestIdx]._ts - nowTs) : Infinity
+    const diff    = Math.abs(item.hour - cityCurrentHour)
+    const bestDiff = bestIdx >= 0 ? Math.abs(data.uvTrend[bestIdx].hour - cityCurrentHour) : Infinity
     return diff < bestDiff ? i : bestIdx
   }, -1)
 
@@ -531,8 +567,6 @@ export default function Detail() {
                   </span>
                 )}
               </div>
-
-              {/* UV progress bar — same style as Home, no text labels */}
               <div style={{ marginTop: '18px', position: 'relative' }}>
                 <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '99px', height: '8px', overflow: 'hidden' }}>
                   <div style={{ width: uvBarW, height: '100%', borderRadius: '99px', background: getBarGradient(data.currentUV), transition: 'width 0.5s ease' }} />
@@ -541,7 +575,6 @@ export default function Detail() {
                   <div key={i} style={{ position: 'absolute', top: 0, left: `${pct * 100}%`, width: '1px', height: '8px', background: 'rgba(255,255,255,0.3)' }} />
                 ))}
               </div>
-
             </div>
 
             {/* Right description */}
@@ -601,12 +634,9 @@ export default function Detail() {
                 {pa.spfCase === 'none' ? '✓ No action needed' : '☀ Daily protection'}
               </span>
             </div>
-
             <p style={{ fontSize: '16px', color: theme.adviceText, lineHeight: 1.7, marginBottom: pa.spfCase === 'none' ? '16px' : '18px' }}>
               {pa.description}
             </p>
-
-            {/* Case: no need — show safety tips */}
             {pa.spfCase === 'none' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {pa.tips.map((tip, i) => (
@@ -616,8 +646,6 @@ export default function Detail() {
                 ))}
               </div>
             )}
-
-            {/* Case: 30+ or 50+ — show recommended amounts */}
             {pa.spfCase !== 'none' && pa.recommendedAmount.length > 0 && (
               <div>
                 <p style={{ fontSize: '16px', fontWeight: 600, color: theme.adviceText, marginBottom: '8px' }}>Recommended amount</p>
