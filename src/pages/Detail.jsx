@@ -107,7 +107,11 @@ function formatHeroDateLabel() {
 }
 
 function formatHourLabel(isoString) {
-  return new Date(isoString).toLocaleTimeString('en-AU', { hour: 'numeric', hour12: true }).replace(':00', '')
+  const hourInt = parseInt(isoString.slice(11, 13), 10)
+  if (isNaN(hourInt)) return isoString
+  if (hourInt === 0)  return '12 am'
+  if (hourInt === 12) return '12 pm'
+  return hourInt < 12 ? `${hourInt} am` : `${hourInt - 12} pm`
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -462,28 +466,18 @@ export default function Detail() {
   const uvBarW    = `${Math.min(100, (data.currentUV / 11) * 100)}%`
 
   const realNow = new Date()
-  const realTimeStr = realNow.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
-  const currentHourLabel = realNow.toLocaleTimeString('en-AU', {
-  hour: 'numeric', hour12: true
-  }).replace(':00', '').toLowerCase().trim()
+const realTimeStr = realNow.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
+const currentHour = realNow.getHours()
+const nowIdx = data.uvTrend.reduce((bestIdx, item, i) => {
+  if (!item.iso) return bestIdx
+  const isoHour = parseInt(item.iso.slice(11, 13), 10)
+  const diff = Math.abs(isoHour - currentHour)
+  const bestHour = bestIdx >= 0 ? parseInt(data.uvTrend[bestIdx].iso.slice(11, 13), 10) : -1
+  const bestDiff = bestIdx >= 0 ? Math.abs(bestHour - currentHour) : Infinity
+  return diff < bestDiff ? i : bestIdx
+}, -1)
 
-  let nowIdx = data.uvTrend.findIndex(item =>
-  item.time.toLowerCase().trim() === currentHourLabel
-  )
-
-  if (nowIdx < 0) {
-  const currentHour = realNow.getHours()
-  nowIdx = data.uvTrend.reduce((bestIdx, item, i) => {
-    if (!item.iso) return bestIdx
-    const isoHour = parseInt(item.iso.slice(11, 13), 10)
-    const diff = Math.abs(isoHour - currentHour)
-    const bestHour = bestIdx >= 0 ? parseInt(data.uvTrend[bestIdx].iso.slice(11, 13), 10) : -1
-    const bestDiff = bestIdx >= 0 ? Math.abs(bestHour - currentHour) : Infinity
-    return diff < bestDiff ? i : bestIdx
-  }, -1)
-  } 
-
-  const nowPoint = chart.points[nowIdx >= 0 ? nowIdx : Math.max(0, chart.points.length - 2)] ?? chart.points[0]
+const nowPoint = chart.points[nowIdx >= 0 ? nowIdx : Math.max(0, chart.points.length - 2)] ?? chart.points[0]
 
   const { protectionAdvice: pa } = data
 
