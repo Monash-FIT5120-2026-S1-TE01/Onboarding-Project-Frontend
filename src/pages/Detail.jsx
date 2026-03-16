@@ -220,8 +220,8 @@ function buildProtectionAdvice(spf, usage) {
       recommendedAmount: [],
     }
   }
-  const faceNeckTsp = usage?.face_neck?.teaspon ?? '~1'
-  const armLegTsp   = usage?.arm_leg?.teaspon   ?? '~2'
+  const faceNeckTsp = usage?.face_neck?.teaspoon ?? '~1'
+  const armLegTsp   = usage?.arm_leg?.teaspoon   ?? '~2'
   const totalMl     = usage?.total?.ml           ?? '~30'
   if (spf >= 50) {
     return {
