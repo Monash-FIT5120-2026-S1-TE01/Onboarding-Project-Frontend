@@ -110,6 +110,7 @@ function formatHourLabel(isoString) {
   return new Date(isoString).toLocaleTimeString('en-AU', { hour: 'numeric', hour12: true }).replace(':00', '')
 }
 
+// eslint-disable-next-line no-unused-vars
 function formatClockTime(isoString) {
   return new Date(isoString).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
@@ -219,6 +220,7 @@ function buildOutfitAdvice(suggCloth, weatherLabel, temperature, currentUV) {
 function mapResponse(res, cityName) {
   const uvTrend      = buildTrendData(res)
   const currentUV    = Number(res?.current_uv_index_time?.uv_index ?? 0)
+  // eslint-disable-next-line no-unused-vars
   const currentISO   = res?.current_uv_index_time?.datetime ?? null
   const weatherLabel = parseWeatherLabel(res?.weather_label)
   const temperature  = Number(res?.temperature ?? 0)
@@ -231,7 +233,6 @@ function mapResponse(res, cityName) {
     dateLabel: formatHeroDateLabel(),
     currentUV, uvLabel: getUVTheme(currentUV).label,
     peakUV, peakTime, lowestUV, lowestTime,
-    currentTimeLabel: currentISO ? formatClockTime(currentISO) : '--:--',
     nowSummary:       buildNowSummary(currentUV, uvTrend),
     protectionAdvice: buildProtectionAdvice(spf, usage),
     outfitAdvice:     buildOutfitAdvice(res?.sugg_cloth, weatherLabel, temperature, currentUV),
@@ -460,7 +461,14 @@ export default function Detail() {
   const uvDisplay = Math.round(data.currentUV)
   const uvBarW    = `${Math.min(100, (data.currentUV / 11) * 100)}%`
 
-  const nowIdx   = data.uvTrend.findIndex(item => item.iso && formatClockTime(item.iso) === data.currentTimeLabel)
+  const realNow = new Date()
+  const realTimeStr = realNow.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
+  const nowIdx = data.uvTrend.reduce((bestIdx, item, i) => {
+    if (!item.iso) return bestIdx
+  const diff = Math.abs(new Date(item.iso) - realNow)
+  const bestDiff = bestIdx >= 0 ? Math.abs(new Date(data.uvTrend[bestIdx].iso) - realNow) : Infinity
+  return diff < bestDiff ? i : bestIdx
+  }, -1)
   const nowPoint = chart.points[nowIdx >= 0 ? nowIdx : Math.max(0, chart.points.length - 2)] ?? chart.points[0]
 
   const { protectionAdvice: pa } = data
@@ -549,7 +557,7 @@ export default function Detail() {
           </div>
 
           <div style={{ marginTop: '16px' }}>
-            <p style={{ fontSize: '18px', fontWeight: 700, color: '#1c1917', marginBottom: '4px' }}>Now, {data.currentTimeLabel}</p>
+            <p style={{ fontSize: '18px', fontWeight: 700, color: '#1c1917', marginBottom: '4px' }}>Now, {realTimeStr}</p>
             <p style={{ fontSize: '16px', color: '#44403c', lineHeight: 1.7 }}>{data.nowSummary}</p>
           </div>
         </Card>
