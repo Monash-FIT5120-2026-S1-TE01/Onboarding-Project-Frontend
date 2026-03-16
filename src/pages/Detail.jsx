@@ -122,19 +122,41 @@ function formatClockTime(isoString) {
 // ── Build UV trend from past / current / forecast ─────────────
 function buildTrendData(res) {
   const map = new Map()
+  function toUtcDate(iso) {
+    return new Date(iso.endsWith('Z') ? iso : iso + 'Z')
+  }
   const pastUV = res?.past_uv_index_time?.uv_index ?? []
   const pastDT = res?.past_uv_index_time?.datetime ?? []
-  pastDT.forEach((iso, i) => map.set(iso, { iso, time: formatHourLabel(iso), value: Number(pastUV[i] ?? 0) }))
-
+  pastDT.forEach((iso, i) => {
+    map.set(iso, {
+      iso,
+      time: formatHourLabel(iso),
+      value: Number(pastUV[i] ?? 0),
+      _ts: toUtcDate(iso).getTime(),
+    })
+  })
   const currentIso = res?.current_uv_index_time?.datetime
   const currentUV  = Number(res?.current_uv_index_time?.uv_index ?? 0)
-  if (currentIso) map.set(currentIso, { iso: currentIso, time: formatHourLabel(currentIso), value: currentUV })
-
+  if (currentIso) {
+    map.set(currentIso, {
+      iso: currentIso,
+      time: formatHourLabel(currentIso),
+      value: currentUV,
+      _ts: toUtcDate(currentIso).getTime(),
+    })
+  }
   const forecastUV = res?.forecast_uv_index_time?.uv_index ?? []
   const forecastDT = res?.forecast_uv_index_time?.datetime ?? []
-  forecastDT.forEach((iso, i) => map.set(iso, { iso, time: formatHourLabel(iso), value: Number(forecastUV[i] ?? 0) }))
+  forecastDT.forEach((iso, i) => {
+    map.set(iso, {
+      iso,
+      time: formatHourLabel(iso),
+      value: Number(forecastUV[i] ?? 0),
+      _ts: toUtcDate(iso).getTime(),
+    })
+  })
 
-  return Array.from(map.values()).sort((a, b) => new Date(a.iso) - new Date(b.iso))
+  return Array.from(map.values()).sort((a, b) => a._ts - b._ts)
 }
 
 function getPeakAndLowest(uvTrend) {
@@ -466,21 +488,17 @@ export default function Detail() {
   const uvBarW    = `${Math.min(100, (data.currentUV / 11) * 100)}%`
 
   const realNow = new Date()
-const realTimeStr = realNow.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
-const currentHour = realNow.getHours()
-const nowIdx = data.uvTrend.reduce((bestIdx, item, i) => {
-  if (!item.iso) return bestIdx
-  const itemDate = new Date(item.iso.endsWith('Z') ? item.iso : item.iso + 'Z')
-  const isoLocalHour = itemDate.getHours() // 转为本地小时
-  const diff = Math.abs(isoLocalHour - currentHour)
-  const bestHour = bestIdx >= 0
-    ? new Date(data.uvTrend[bestIdx].iso.endsWith('Z') ? data.uvTrend[bestIdx].iso : data.uvTrend[bestIdx].iso + 'Z').getHours()
-    : -1
-  const bestDiff = bestIdx >= 0 ? Math.abs(bestHour - currentHour) : Infinity
-  return diff < bestDiff ? i : bestIdx
-}, -1)
+  const realTimeStr = realNow.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
+  const nowTs = realNow.getTime()
 
-const nowPoint = chart.points[nowIdx >= 0 ? nowIdx : Math.max(0, chart.points.length - 2)] ?? chart.points[0]
+  const nowIdx = data.uvTrend.reduce((bestIdx, item, i) => {
+    if (!item._ts) return bestIdx
+    const diff = Math.abs(item._ts - nowTs)
+    const bestDiff = bestIdx >= 0 ? Math.abs(data.uvTrend[bestIdx]._ts - nowTs) : Infinity
+    return diff < bestDiff ? i : bestIdx
+  }, -1)
+
+  const nowPoint = chart.points[nowIdx >= 0 ? nowIdx : Math.max(0, chart.points.length - 2)] ?? chart.points[0]
 
   const { protectionAdvice: pa } = data
 
