@@ -25,7 +25,7 @@ const SUPPORTED_CITIES = [
 ]
 
 const CACHE_KEY = 'sunsense_uv_cache_home'
-const CACHE_TTL   = 60 * 60 * 1000 // 1 hour in ms
+const CACHE_TTL = 60 * 60 * 1000 // 1 hour in ms
 
 function getTimezone(cityName) {
   const found = SUPPORTED_CITIES.find(
@@ -117,7 +117,7 @@ function getWeatherInfo(label) {
   return { icon: '🌤️', desc: 'Unknown' }
 }
 
-// ── Safe sun time formatter (fix #1) ─────────────────────────
+// ── Safe sun time formatter ───────────────────────────────────
 function formatTime(totalMinutes) {
   if (!totalMinutes || totalMinutes <= 0) return '0 min'
   if (totalMinutes < 60) return `${Math.round(totalMinutes)} min`
@@ -160,6 +160,39 @@ function setCached(cityId, data) {
   }
 }
 
+// ── UV alert content by level ─────────────────────────────────
+function getUVAlertContent(uvi) {
+  if (uvi > 2 && uvi <= 5) return {
+    icon: '🧴',
+    borderColor: '#fbbf24',
+    iconBg: '#fef3c7',
+    heading: 'Moderate UV — Take Care',
+    body: "UV levels are moderate right now. If you're heading outdoors for more than 20 minutes, it's a good idea to apply SPF 30+ sunscreen and wear a hat.",
+  }
+  if (uvi > 5 && uvi <= 7) return {
+    icon: '⚠️',
+    borderColor: '#f97316',
+    iconBg: '#fff7ed',
+    heading: 'High UV — Protection Needed',
+    body: 'UV levels are high today. Apply SPF 30+ before going outside, seek shade between 10am and 4pm, and protect yourself with a hat and sunglasses.',
+  }
+  if (uvi > 7 && uvi <= 10) return {
+    icon: '🚨',
+    borderColor: '#ef4444',
+    iconBg: '#fef2f2',
+    heading: 'Very High UV — Stay Protected',
+    body: 'UV is very high. Minimise time outdoors, apply SPF 50+, and cover exposed skin with clothing, a wide-brim hat, and sunglasses. Reapply sunscreen every 2 hours.',
+  }
+  // Extreme (> 10)
+  return {
+    icon: '☠️',
+    borderColor: '#a855f7',
+    iconBg: '#faf5ff',
+    heading: 'Extreme UV — Avoid Outdoor Exposure',
+    body: 'UV levels are extreme. It is strongly advised to stay indoors during peak hours. If you must go outside, wear SPF 50+, full-coverage clothing, sunglasses, and a hat — and limit your time exposed.',
+  }
+}
+
 // ── Main component ────────────────────────────────────────────
 export default function Home() {
   const [data, setData]       = useState(null)
@@ -173,6 +206,7 @@ export default function Home() {
   const [showBanner, setShowBanner]       = useState(false)
   const [showDonePopup, setShowDonePopup] = useState(false)
   const notifiedRef = useRef(false)
+  const [showUVAlert, setShowUVAlert] = useState(false)
 
   // ── Fetch UV data with 1-hour cache ──────────────────────────
   useEffect(() => {
@@ -183,12 +217,24 @@ export default function Home() {
     const cityName = city?.name ?? 'Melbourne'
     const timezone = city?.timezone ?? getTimezone(cityName)
 
+    // ── Helper: trigger UV alert once per city per session ────
+    function maybeShowUVAlert(uvIndex) {
+      if ((uvIndex ?? 0) >= 3) {
+        const alertedKey = `sunsense_uv_alerted_${cityId}`
+        if (!sessionStorage.getItem(alertedKey)) {
+          sessionStorage.setItem(alertedKey, '1')
+          setShowUVAlert(true)
+        }
+      }
+    }
+
     // Check cache first — only use if it contains full Home page data
     const cached = getCached(cityId)
     if (cached && cached.safeSunTime !== undefined && cached.cityName) {
-    setData(cached)
-    setLoading(false)
-    return
+      setData(cached)
+      maybeShowUVAlert(cached.uvIndex)
+      setLoading(false)
+      return
     }
 
     setLoading(true)
@@ -217,6 +263,7 @@ export default function Home() {
         }
         setCached(cityId, parsed)
         setData(parsed)
+        maybeShowUVAlert(parsed.uvIndex)
         setLoading(false)
       })
       .catch(() => {
@@ -303,14 +350,16 @@ export default function Home() {
   const weather  = getWeatherInfo(data.weatherLabel)
   const videoSrc = getWeatherVideo(data.weatherLabel)
   const uvBarW   = `${Math.min(100, (data.uvIndex / 11) * 100)}%`
-  const uvDisplay = Math.round(data.uvIndex) // fix #4: no decimal
+  const uvDisplay = Math.round(data.uvIndex)
 
   const dateStr = now.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })
   const timeStr = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
-  const hasModal = showBanner || showDonePopup
+  const hasModal = showBanner || showDonePopup || showUVAlert
 
-  // fix #6: SPF display logic
   const spfDisplay = (!data.spf || data.spf === 0)
+
+  // UV alert content
+  const uvAlertContent = showUVAlert ? getUVAlertContent(data.uvIndex) : null
 
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', paddingBottom: '40px', position: 'relative' }}>
@@ -329,6 +378,59 @@ export default function Home() {
           to   { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
       `}</style>
+
+      {/* UV Alert Modal */}
+      {showUVAlert && uvAlertContent && (
+        <div style={{
+          position: 'fixed', top: '70px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 1000, width: 'min(480px, 92vw)',
+          background: '#fff', borderRadius: '20px',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.20)',
+          border: `2px solid ${uvAlertContent.borderColor}`,
+          padding: '24px',
+          display: 'flex', flexDirection: 'column', gap: '16px',
+          animation: 'slideDown 0.3s ease'
+        }}>
+          {/* Icon + title */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{
+              width: '52px', height: '52px', borderRadius: '50%',
+              background: uvAlertContent.iconBg,
+              border: `1.5px solid ${uvAlertContent.borderColor}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '26px', flexShrink: 0,
+            }}>{uvAlertContent.icon}</div>
+            <div>
+              <p style={{ fontWeight: 700, fontSize: '16px', color: '#1c1917', lineHeight: 1.3, margin: 0 }}>
+                {uvAlertContent.heading}
+              </p>
+              <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px', margin: 0 }}>
+                Current UV Index:{' '}
+                <strong style={{ color: getUVTheme(data.uvIndex).color }}>
+                  {Math.round(data.uvIndex)} — {getUVTheme(data.uvIndex).label}
+                </strong>
+              </p>
+            </div>
+          </div>
+
+          {/* Body */}
+          <p style={{ fontSize: '14px', color: '#44403c', lineHeight: 1.65, margin: 0 }}>
+            {uvAlertContent.body}
+          </p>
+
+          {/* Dismiss */}
+          <button
+            onClick={() => setShowUVAlert(false)}
+            style={{
+              background: `linear-gradient(135deg, ${uvAlertContent.borderColor}, ${uvAlertContent.borderColor}cc)`,
+              color: '#fff', border: 'none', borderRadius: '12px',
+              padding: '11px', fontWeight: 600, fontSize: '14px',
+              cursor: 'pointer', width: '100%',
+              boxShadow: `0 4px 12px ${uvAlertContent.borderColor}55`,
+            }}
+          >✓ Got it</button>
+        </div>
+      )}
 
       {/* Overdue reapply banner */}
       {showBanner && (
@@ -543,33 +645,34 @@ export default function Home() {
             <span style={{ color: '#d8001d', fontWeight: 600 }}>V.High</span>
             <span style={{ color: '#b54cff', fontWeight: 600 }}>Extreme</span>
           </div>
+          {/* UV level inline tip */}
           {(() => {
-          const uvi = data.uvIndex
-          if (uvi <= 2) return (
-          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#166534' }}>
-            ✅ <strong>Safe now.</strong> UV is low — no sunscreen needed for short outdoor stays. Enjoy the outdoors!
-          </div>
-          )
-          if (uvi > 2 && uvi <= 5) return (
-          <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#92400e' }}>
-            🧴 <strong>Apply SPF 30+.</strong> UV is moderate — wear sunscreen and a hat if you're heading out for more than 20 minutes.
-          </div>
-          )
-          if (uvi > 5 && uvi <= 7) return (
-          <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#92400e' }}>
-            ⚠️ <strong>Protection essential.</strong> UV is high — apply SPF 30+, seek shade between 10am–4pm, and wear a hat and sunglasses.
-          </div>
-          )
-          if (uvi > 7 && uvi <= 10) return (
-          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#991b1b' }}>
-            🚨 <strong>High risk.</strong> UV is very high — minimise outdoor exposure, apply SPF 50+, and cover up with clothing and a hat.
-          </div>
-          )
-          return (
-          <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#7e22ce' }}>
-            ☠️ <strong>Extreme UV.</strong> Avoid being outdoors if possible. If unavoidable, apply SPF 50+, wear full-coverage clothing, hat, and sunglasses.
-          </div>
-          )
+            const uvi = data.uvIndex
+            if (uvi <= 2) return (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#166534' }}>
+                ✅ <strong>Safe now.</strong> UV is low — no sunscreen needed for short outdoor stays. Enjoy the outdoors!
+              </div>
+            )
+            if (uvi > 2 && uvi <= 5) return (
+              <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#92400e' }}>
+                🧴 <strong>Apply SPF 30+.</strong> UV is moderate — wear sunscreen and a hat if you're heading out for more than 20 minutes.
+              </div>
+            )
+            if (uvi > 5 && uvi <= 7) return (
+              <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#92400e' }}>
+                ⚠️ <strong>Protection essential.</strong> UV is high — apply SPF 30+, seek shade between 10am–4pm, and wear a hat and sunglasses.
+              </div>
+            )
+            if (uvi > 7 && uvi <= 10) return (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#991b1b' }}>
+                🚨 <strong>High risk.</strong> UV is very high — minimise outdoor exposure, apply SPF 50+, and cover up with clothing and a hat.
+              </div>
+            )
+            return (
+              <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#7e22ce' }}>
+                ☠️ <strong>Extreme UV.</strong> Avoid being outdoors if possible. If unavoidable, apply SPF 50+, wear full-coverage clothing, hat, and sunglasses.
+              </div>
+            )
           })()}
         </Card>
 
