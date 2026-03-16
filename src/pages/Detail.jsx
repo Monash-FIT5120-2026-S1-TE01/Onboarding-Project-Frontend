@@ -107,11 +107,11 @@ function formatHeroDateLabel() {
 }
 
 function formatHourLabel(isoString) {
-  const hourInt = parseInt(isoString.slice(11, 13), 10)
-  if (isNaN(hourInt)) return isoString
-  if (hourInt === 0)  return '12 am'
-  if (hourInt === 12) return '12 pm'
-  return hourInt < 12 ? `${hourInt} am` : `${hourInt - 12} pm`
+  const date = new Date(isoString.endsWith('Z') ? isoString : isoString + 'Z')
+  const hour = date.getHours()
+  if (hour === 0)  return '12 am'
+  if (hour === 12) return '12 pm'
+  return hour < 12 ? `${hour} am` : `${hour - 12} pm`
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -470,9 +470,12 @@ const realTimeStr = realNow.toLocaleTimeString('en-AU', { hour: '2-digit', minut
 const currentHour = realNow.getHours()
 const nowIdx = data.uvTrend.reduce((bestIdx, item, i) => {
   if (!item.iso) return bestIdx
-  const isoHour = parseInt(item.iso.slice(11, 13), 10)
-  const diff = Math.abs(isoHour - currentHour)
-  const bestHour = bestIdx >= 0 ? parseInt(data.uvTrend[bestIdx].iso.slice(11, 13), 10) : -1
+  const itemDate = new Date(item.iso.endsWith('Z') ? item.iso : item.iso + 'Z')
+  const isoLocalHour = itemDate.getHours() // 转为本地小时
+  const diff = Math.abs(isoLocalHour - currentHour)
+  const bestHour = bestIdx >= 0
+    ? new Date(data.uvTrend[bestIdx].iso.endsWith('Z') ? data.uvTrend[bestIdx].iso : data.uvTrend[bestIdx].iso + 'Z').getHours()
+    : -1
   const bestDiff = bestIdx >= 0 ? Math.abs(bestHour - currentHour) : Infinity
   return diff < bestDiff ? i : bestIdx
 }, -1)
