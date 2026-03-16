@@ -253,7 +253,7 @@ export default function Home() {
       body: JSON.stringify({
         city_name:             cityName.toLowerCase(),
         timezone:              timezone,
-        sun_screen_efficiency: 0.8,
+        sun_screen_efficiency: 0.3,
         skin_type:             3,
       })
     })
