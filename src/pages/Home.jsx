@@ -543,15 +543,34 @@ export default function Home() {
             <span style={{ color: '#d8001d', fontWeight: 600 }}>V.High</span>
             <span style={{ color: '#b54cff', fontWeight: 600 }}>Extreme</span>
           </div>
-          {data.uvIndex > 3 && (
-            <div style={{
-              background: '#fff7ed', border: '1px solid #fed7aa',
-              borderRadius: '10px', padding: '10px 14px',
-              fontSize: '13px', color: '#92400e'
-            }}>
-              <strong>Sun protection is recommended.</strong> Use sunscreen and seek shade during extended outdoor time.
-            </div>
-          )}
+          {(() => {
+          const uvi = data.uvIndex
+          if (uvi <= 2) return (
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#166534' }}>
+            ✅ <strong>Safe now.</strong> UV is low — no sunscreen needed for short outdoor stays. Enjoy the outdoors!
+          </div>
+          )
+          if (uvi > 2 && uvi <= 5) return (
+          <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#92400e' }}>
+            🧴 <strong>Apply SPF 30+.</strong> UV is moderate — wear sunscreen and a hat if you're heading out for more than 20 minutes.
+          </div>
+          )
+          if (uvi > 5 && uvi <= 7) return (
+          <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#92400e' }}>
+            ⚠️ <strong>Protection essential.</strong> UV is high — apply SPF 30+, seek shade between 10am–4pm, and wear a hat and sunglasses.
+          </div>
+          )
+          if (uvi > 7 && uvi <= 10) return (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#991b1b' }}>
+            🚨 <strong>High risk.</strong> UV is very high — minimise outdoor exposure, apply SPF 50+, and cover up with clothing and a hat.
+          </div>
+          )
+          return (
+          <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#7e22ce' }}>
+            ☠️ <strong>Extreme UV.</strong> Avoid being outdoors if possible. If unavoidable, apply SPF 50+, wear full-coverage clothing, hat, and sunglasses.
+          </div>
+          )
+          })()}
         </Card>
 
         {/* Reapply Reminder card */}

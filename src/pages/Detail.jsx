@@ -99,8 +99,8 @@ function getBarGradient(uvi) {
 }
 
 // ── Time formatters ───────────────────────────────────────────
-function formatHeroDateLabel(isoString) {
-  const date = isoString ? new Date(isoString) : new Date()
+function formatHeroDateLabel() {
+  const date = new Date()
   const datePart = date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })
   const timePart = date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()
   return `${datePart} · ${timePart}`
@@ -228,7 +228,7 @@ function mapResponse(res, cityName) {
 
   return {
     cityName: cityName || 'Melbourne',
-    dateLabel: formatHeroDateLabel(currentISO),
+    dateLabel: formatHeroDateLabel(),
     currentUV, uvLabel: getUVTheme(currentUV).label,
     peakUV, peakTime, lowestUV, lowestTime,
     currentTimeLabel: currentISO ? formatClockTime(currentISO) : '--:--',
