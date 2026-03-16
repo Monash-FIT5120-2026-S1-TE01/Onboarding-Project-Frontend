@@ -757,7 +757,7 @@ export default function Home() {
           </Card>
           <Card>
             <Label>🛡 SAFE SUN TIME</Label>
-              {data.uvIndex === 0 ? (
+              {Math.round(data.uvIndex) === 0 ? (
             <>
             <p style={{ fontSize: '32px', fontWeight: 700, color: '#4eb400', margin: '6px 0 4px', lineHeight: 1 }}>
                Safe ✓
