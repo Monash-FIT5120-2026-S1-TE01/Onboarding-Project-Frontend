@@ -463,12 +463,26 @@ export default function Detail() {
 
   const realNow = new Date()
   const realTimeStr = realNow.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
-  const nowIdx = data.uvTrend.reduce((bestIdx, item, i) => {
+  const currentHourLabel = realNow.toLocaleTimeString('en-AU', {
+  hour: 'numeric', hour12: true
+  }).replace(':00', '').toLowerCase().trim()
+
+  let nowIdx = data.uvTrend.findIndex(item =>
+  item.time.toLowerCase().trim() === currentHourLabel
+  )
+
+  if (nowIdx < 0) {
+  const currentHour = realNow.getHours()
+  nowIdx = data.uvTrend.reduce((bestIdx, item, i) => {
     if (!item.iso) return bestIdx
-  const diff = Math.abs(new Date(item.iso) - realNow)
-  const bestDiff = bestIdx >= 0 ? Math.abs(new Date(data.uvTrend[bestIdx].iso) - realNow) : Infinity
-  return diff < bestDiff ? i : bestIdx
+    const isoHour = parseInt(item.iso.slice(11, 13), 10)
+    const diff = Math.abs(isoHour - currentHour)
+    const bestHour = bestIdx >= 0 ? parseInt(data.uvTrend[bestIdx].iso.slice(11, 13), 10) : -1
+    const bestDiff = bestIdx >= 0 ? Math.abs(bestHour - currentHour) : Infinity
+    return diff < bestDiff ? i : bestIdx
   }, -1)
+  } 
+
   const nowPoint = chart.points[nowIdx >= 0 ? nowIdx : Math.max(0, chart.points.length - 2)] ?? chart.points[0]
 
   const { protectionAdvice: pa } = data
