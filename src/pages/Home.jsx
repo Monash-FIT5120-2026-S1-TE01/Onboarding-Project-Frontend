@@ -758,7 +758,7 @@ export default function Home() {
               {formatTime(data.safeSunTime)}
             </p>
             <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px', lineHeight: 1.4 }}>
-              {spfDisplay ? 'No sunscreen applied' : `Assumes SPF ${data.spf} applied`}
+              {spfDisplay ? 'No sunscreen applied' : `Assumes SPF ${data.spf}+ applied and reapplied every two hours`}
             </p>
           </Card>
         </div>
