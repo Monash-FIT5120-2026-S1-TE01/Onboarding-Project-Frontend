@@ -98,20 +98,16 @@ function getBarGradient(uvi) {
 
 // ── Time helpers ──────────────────────────────────────────────
 
-// iso 是后端返回的城市本地时间字符串，如 "2025-03-16T14:00:00"
-// 直接截取小时，不做任何时区转换
 function isoToLocalHour(iso) {
   return parseInt(iso.slice(11, 13), 10)
 }
 
-// 把本地小时数字转为显示标签，如 0→"12 am", 13→"1 pm"
 function hourToLabel(hour) {
   if (hour === 0)  return '12 am'
   if (hour === 12) return '12 pm'
   return hour < 12 ? `${hour} am` : `${hour - 12} pm`
 }
 
-// 获取目标城市当前的本地小时（0-23）
 function getCityCurrentHour(timezone) {
   try {
     const str = new Date().toLocaleString('en-AU', {
@@ -119,7 +115,6 @@ function getCityCurrentHour(timezone) {
       hour: 'numeric',
       hour12: false,
     })
-    // en-AU hour12:false 可能返回 "24" 代表 0 点
     const h = parseInt(str, 10)
     return h === 24 ? 0 : h
   } catch {
@@ -127,10 +122,8 @@ function getCityCurrentHour(timezone) {
   }
 }
 
-// 获取目标城市今天的日期字符串 "YYYY-MM-DD"
 function getCityTodayDate(timezone) {
   try {
-    // toLocaleDateString 返回 "16/03/2025"，转为 "2025-03-16"
     const parts = new Date().toLocaleDateString('en-AU', {
       timeZone: timezone,
       year: 'numeric',
@@ -145,17 +138,13 @@ function getCityTodayDate(timezone) {
 }
 
 // ── Build UV trend data ───────────────────────────────────────
-// 只保留目标城市今天（本地日期）的数据，按小时 0-23 排序
 function buildTrendData(res, cityTimezone) {
   const todayDate = getCityTodayDate(cityTimezone)
   const map = new Map()
 
   function addPoint(iso, value) {
-    // iso 格式: "2025-03-16T14:00:00"
-    // 只保留今天日期的数据点
     if (!iso || iso.slice(0, 10) !== todayDate) return
     const hour = isoToLocalHour(iso)
-    // 同一小时只保留最新的（current 覆盖 past/forecast）
     if (!map.has(hour) || iso === res?.current_uv_index_time?.datetime) {
       map.set(hour, {
         iso,
@@ -178,7 +167,6 @@ function buildTrendData(res, cityTimezone) {
   const forecastDT = res?.forecast_uv_index_time?.datetime ?? []
   forecastDT.forEach((iso, i) => addPoint(iso, forecastUV[i]))
 
-  // 按小时 0→23 排序，保证横轴从早到晚
   return Array.from(map.values()).sort((a, b) => a.hour - b.hour)
 }
 
@@ -520,14 +508,12 @@ export default function Detail() {
   const uvDisplay = Math.round(data.currentUV)
   const uvBarW    = `${Math.min(100, (data.currentUV / 11) * 100)}%`
 
-  // 用目标城市时区获取当前小时，与 iso 截取的本地小时对齐
   const cityCurrentHour = getCityCurrentHour(data.cityTimezone)
   const realTimeStr = new Date().toLocaleTimeString('en-AU', {
     timeZone: data.cityTimezone,
     hour: '2-digit', minute: '2-digit',
   })
 
-  // 找最接近城市当前小时的数据点
   const nowIdx = data.uvTrend.reduce((bestIdx, item, i) => {
     const diff    = Math.abs(item.hour - cityCurrentHour)
     const bestDiff = bestIdx >= 0 ? Math.abs(data.uvTrend[bestIdx].hour - cityCurrentHour) : Infinity

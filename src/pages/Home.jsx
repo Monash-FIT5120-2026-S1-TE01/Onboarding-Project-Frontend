@@ -27,9 +27,7 @@ const SUPPORTED_CITIES = [
 const CACHE_KEY = 'sunsense_uv_cache_home'
 const CACHE_TTL = 60 * 60 * 1000 // 1 hour in ms
 
-// ── Module-level set: tracks which cities have been alerted
-//    this render cycle. Cleared per city on every city switch
-//    so switching back always re-triggers the alert once. ──────
+
 const alertedCities = new Set()
 
 function getTimezone(cityName) {
