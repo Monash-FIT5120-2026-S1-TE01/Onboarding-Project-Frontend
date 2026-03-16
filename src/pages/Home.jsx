@@ -270,6 +270,8 @@ export default function Home() {
         }
         setCached(cityId, parsed)
         setData(parsed)
+        console.log('[SunGuard] Raw API response for', cityName, ':', JSON.stringify(res, null, 2))
+        console.log('[SunGuard] Parsed data:', JSON.stringify(parsed, null, 2))
         maybeShowUVAlert(parsed.uvIndex)
         setLoading(false)
       })
