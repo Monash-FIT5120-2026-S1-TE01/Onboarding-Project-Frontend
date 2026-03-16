@@ -757,6 +757,17 @@ export default function Home() {
           </Card>
           <Card>
             <Label>🛡 SAFE SUN TIME</Label>
+              {data.uvIndex === 0 ? (
+            <>
+            <p style={{ fontSize: '32px', fontWeight: 700, color: '#4eb400', margin: '6px 0 4px', lineHeight: 1 }}>
+               Safe ✓
+            </p>
+            <p style={{ fontSize: '11px', color: '#4eb400', marginTop: '6px', lineHeight: 1.4, fontWeight: 500 }}>
+               UV is zero — you're free to enjoy the outdoors!
+            </p>
+            </>
+            ) : (
+            <>
             <p style={{ fontSize: '13px', color: '#9ca3af', margin: '6px 0 2px' }}>Less than</p>
             <p style={{ fontSize: '32px', fontWeight: 700, color: '#1c1917', lineHeight: 1 }}>
               {formatTime(data.safeSunTime)}
@@ -764,6 +775,8 @@ export default function Home() {
             <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px', lineHeight: 1.4 }}>
               {spfDisplay ? 'No sunscreen applied' : `Assumes SPF ${data.spf}+ applied and reapplied every two hours`}
             </p>
+            </>
+              )}
           </Card>
         </div>
 
