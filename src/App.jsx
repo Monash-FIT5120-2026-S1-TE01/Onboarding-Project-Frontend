@@ -1,30 +1,48 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import NavBar from './components/NavBar'
 import Landing from './pages/Landing.jsx'
 import Home from './pages/Home'
 import Cities from './pages/Cities'
 import Detail from './pages/Detail'
+import PasswordGate from './pages/PasswordGate.jsx'
+
+const AUTH_KEY = 'sunsense_auth'
+
+// ── Auth guard: redirects to /auth if not authenticated ──────
+function RequireAuth({ children }) {
+  const location = useLocation()
+  const isAuthed = sessionStorage.getItem(AUTH_KEY) === '1'
+  if (!isAuthed) {
+    return <Navigate to="/auth" state={{ from: location }} replace />
+  }
+  return children
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Landing page independent, does not have NavBar. */}
+        {/* Landing page — public, no NavBar */}
         <Route path="/" element={<Landing />} />
 
-        {/* Other pages have NavBar */}
+        {/* Password gate — public */}
+        <Route path="/auth" element={<PasswordGate />} />
+
+        {/* Protected pages — require auth */}
         <Route path="/*" element={
-          <div className="min-h-screen flex flex-col bg-white">
-            <NavBar />
-            <main className="flex-1 pb-20 md:pb-0">
-              <Routes>
-                <Route path="/home"    element={<Home />} />
-                <Route path="/cities"  element={<Cities />} />
-                <Route path="/detail"  element={<Detail />} />
-              </Routes>
-            </main>
-            <MobileTabBar />
-          </div>
+          <RequireAuth>
+            <div className="min-h-screen flex flex-col bg-white">
+              <NavBar />
+              <main className="flex-1 pb-20 md:pb-0">
+                <Routes>
+                  <Route path="/home"   element={<Home />} />
+                  <Route path="/cities" element={<Cities />} />
+                  <Route path="/detail" element={<Detail />} />
+                </Routes>
+              </main>
+              <MobileTabBar />
+            </div>
+          </RequireAuth>
         } />
       </Routes>
     </BrowserRouter>
@@ -33,9 +51,9 @@ export default function App() {
 
 function MobileTabBar() {
   const items = [
-    { to: '/home',    emoji: '🏠', label: 'Home'    },
-    { to: '/cities',  emoji: '🏙️', label: 'Cities'  },
-    { to: '/detail',  emoji: '📊', label: 'Detail'  },
+    { to: '/home',   emoji: '🏠', label: 'Home'   },
+    { to: '/cities', emoji: '🏙️', label: 'Cities' },
+    { to: '/detail', emoji: '📊', label: 'Detail' },
   ]
   const current = window.location.pathname
 

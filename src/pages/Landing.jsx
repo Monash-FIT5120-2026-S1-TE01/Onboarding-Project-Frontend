@@ -41,6 +41,9 @@ export default function Landing() {
     return () => clearTimeout(t)
   }, [])
 
+  // All nav items and the CTA button point to /auth
+  const handleEnter = () => navigate('/auth')
+
   return (
     <div
       ref={containerRef}
@@ -84,7 +87,7 @@ export default function Landing() {
         zIndex: 1, pointerEvents: 'none',
       }} />
 
-      {/* ── Top navigation ── */}
+      {/* ── Top navigation — all links go to /auth ── */}
       <header style={{
         position: 'absolute', top: 0, zIndex: 10,
         width: '100%', display: 'flex',
@@ -103,11 +106,11 @@ export default function Landing() {
           boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
         }}>
           {[
-            { to: '/home',   label: 'Home'      },
-            { to: '/cities', label: 'Cities'    },
-            { to: '/detail', label: 'UV Detail' },
+            { to: '/auth', label: 'Home'      },
+            { to: '/auth', label: 'Cities'    },
+            { to: '/auth', label: 'UV Detail' },
           ].map(item => (
-            <NavLink key={item.to} to={item.to} label={item.label} />
+            <NavLink key={item.label} to={item.to} label={item.label} />
           ))}
         </nav>
       </header>
@@ -211,7 +214,7 @@ export default function Landing() {
         </p>
       </div>
 
-      {/* ── CTA Botton ── */}
+      {/* ── CTA Button — goes to /auth ── */}
       <div style={{
         position: 'absolute', bottom: '8%',
         display: 'flex', justifyContent: 'center',
@@ -222,7 +225,7 @@ export default function Landing() {
       }}>
         <button
           className="landing-btn"
-          onClick={() => navigate('/home')}
+          onClick={handleEnter}
           onMouseEnter={() => setBtnHovered(true)}
           onMouseLeave={() => setBtnHovered(false)}
           style={{
