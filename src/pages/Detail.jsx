@@ -390,7 +390,7 @@ export default function Detail() {
             {pa.spfCase==='none' && (
               <div style={{ background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:'12px',padding:'14px 16px' }}>
                 <p style={{ fontSize:'12px',fontWeight:600,color:'#166534',textTransform:'uppercase',letterSpacing:'0.06em',margin:'0 0 6px' }}>Good to Know</p>
-                <p style={{ fontSize:'13px',color:'#166534',lineHeight:1.6,margin:0 }}>UV conditions can change rapidly throughout the day. Check back when heading outdoors and consider applying SPF 30+ if you plan to be outside for more than 30 minutes.</p>
+                <p style={{ fontSize:'13px',color:'#166534',lineHeight:1.6,margin:0 }}>UV conditions can change rapidly throughout the day. Check back when heading outdoors and consider applying Sunscreen if you plan to join outdoor activities.</p>
               </div>
             )}
           </div>

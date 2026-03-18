@@ -406,7 +406,7 @@ export default function Home() {
         {/* Row 3: 3 Tip Cards */}
         <div className="hp-3col">
           {[
-            { icon:'🧴', title:'Importance of Sunscreen', desc:'Use broad-spectrum sunscreen 20 minutes before going outdoors. Reapply every 2 hours, and after swimming or sweating, to maintain consistent protection.' },
+            { icon:'🛡️', title:'Importance of SkinCare', desc:'Use broad-spectrum sunscreen 20 minutes before going outdoors. Reapply every 2 hours, and after swimming or sweating, to maintain consistent protection.' },
             { icon:'👒', title:'Cover Up',       desc:'Wear a broad-brim hat, UV-protective sunglasses, and lightweight long-sleeved clothing. UPF 50+ fabrics block over 98% of UV radiation reaching your skin.' },
             { icon:'🌳', title:'Seek Shade',     desc:'Stay under shade between 10am–4pm when UV peaks. Note that UV can still reach you indirectly from reflected surfaces like water, sand and concrete.' },
           ].map((tip,i) => (
