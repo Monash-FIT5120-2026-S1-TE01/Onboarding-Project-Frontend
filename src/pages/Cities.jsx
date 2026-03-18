@@ -203,16 +203,20 @@ export default function Cities() {
           grid-template-columns: repeat(3, 1fr);
           gap: 20px;
         }
+        .cities-top-row {
+          display: grid;
+          grid-template-columns: 1fr 340px;
+          gap: 20px;
+          margin-bottom: 24px;
+          align-items: start;
+        }
         @media (max-width: 900px) {
           .cities-grid { grid-template-columns: 1fr !important; }
+          .cities-top-row { grid-template-columns: 1fr !important; }
         }
         @keyframes toast-in {
           from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes toast-out {
-          from { opacity: 1; }
-          to   { opacity: 0; }
         }
       `}</style>
 
@@ -262,7 +266,7 @@ export default function Cities() {
           <source src="/videos/City.mp4" type="video/mp4" />
         </video>
         <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'rgba(26,5,0,0.50)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', inset: 0, zIndex: 3, display: 'flex', alignItems: 'center', padding: '0 48px' }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 3, display: 'flex', alignItems: 'center', padding: '0 clamp(20px, 4vw, 48px)' }}>
           <div style={{ maxWidth: '1280px', margin: '0 auto', width: '100%' }}>
             <h1 style={{ color: '#fff', fontSize: '36px', fontWeight: 700, fontFamily: 'Georgia, serif', marginBottom: '8px', textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>My Cities</h1>
             <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '14px', textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>Track UV levels across up to 3 Australian locations</p>
@@ -270,10 +274,10 @@ export default function Cities() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '1280px', margin: '28px auto', padding: '0 48px' }}>
+      <div style={{ maxWidth: '1280px', margin: '28px auto', padding: '0 clamp(20px, 4vw, 48px)' }}>
 
         {/* Search + info row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '20px', marginBottom: '24px', alignItems: 'start' }}>
+        <div className="cities-top-row">
 
           {/* Search box */}
           <div style={{ background: '#fff', borderRadius: '16px', padding: '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f3f4f6', position: 'relative' }}>

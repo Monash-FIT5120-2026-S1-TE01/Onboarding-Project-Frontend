@@ -47,8 +47,7 @@ function parseWeatherLabel(raw) {
 }
 
 function getWeatherVideo(label) {
-  if (!label) return '/videos/Clear.mp4'
-  const l = label.toLowerCase()
+  const l = (label ?? '').toLowerCase()
   if (l.includes('clear'))        return '/videos/Clear.mp4'
   if (l.includes('cloudy'))       return '/videos/Cloudy.mp4'
   if (l.includes('fog'))          return '/videos/Fog.mp4'
@@ -60,23 +59,21 @@ function getWeatherVideo(label) {
 }
 
 function getUVTheme(uvi) {
-  if (uvi <= 2)  return { label: 'Low',       color: '#4eb400', overlayColor: 'rgba(26,58,0,0.45)'   }
-  if (uvi <= 5)  return { label: 'Moderate',  color: '#f7e400', overlayColor: 'rgba(58,46,0,0.45)'   }
-  if (uvi <= 7)  return { label: 'High',      color: '#f88700', overlayColor: 'rgba(58,21,0,0.45)'   }
-  if (uvi <= 10) return { label: 'Very High', color: '#e82c0e', overlayColor: 'rgba(42,0,0,0.50)'    }
-  return               { label: 'Extreme',   color: '#b54cff', overlayColor: 'rgba(26,0,48,0.50)'   }
+  if (uvi <= 2)  return { label: 'Low',       color: '#4eb400', overlayColor: 'rgba(26,58,0,0.45)'  }
+  if (uvi <= 5)  return { label: 'Moderate',  color: '#f7e400', overlayColor: 'rgba(58,46,0,0.45)'  }
+  if (uvi <= 7)  return { label: 'High',      color: '#f88700', overlayColor: 'rgba(58,21,0,0.45)'  }
+  if (uvi <= 10) return { label: 'Very High', color: '#e82c0e', overlayColor: 'rgba(42,0,0,0.50)'   }
+  return               { label: 'Extreme',   color: '#b54cff', overlayColor: 'rgba(26,0,48,0.50)'  }
 }
 
 const UV_BAR_STOPS = ['#4eb400','#a0ce00','#f7e400','#f8b600','#f88700','#f85900','#e82c0e','#d8001d','#ff0099','#b54cff','#998cff']
 function getBarGradient(uvi) {
-  const pct = Math.min(1, uvi / 11)
-  const stopCount = Math.max(2, Math.ceil(pct * UV_BAR_STOPS.length))
+  const stopCount = Math.max(2, Math.ceil(Math.min(1, uvi / 11) * UV_BAR_STOPS.length))
   return `linear-gradient(90deg, ${UV_BAR_STOPS.slice(0, stopCount).join(', ')})`
 }
 
 function getWeatherInfo(label) {
-  if (!label) return { icon: '🌤️', desc: 'Unknown' }
-  const l = label.toLowerCase()
+  const l = (label ?? '').toLowerCase()
   if (l.includes('clear'))        return { icon: '☀️',  desc: 'Clear sky'    }
   if (l.includes('cloudy'))       return { icon: '⛅',  desc: 'Partly cloudy'}
   if (l.includes('fog'))          return { icon: '🌫️', desc: 'Foggy'        }
@@ -90,8 +87,7 @@ function getWeatherInfo(label) {
 function formatTime(totalMinutes) {
   if (!totalMinutes || totalMinutes <= 0) return '0 min'
   if (totalMinutes < 60) return `${Math.round(totalMinutes)} min`
-  const totalHours = totalMinutes / 60
-  if (totalHours >= 24) return '> 1 day'
+  if (totalMinutes / 60 >= 24) return '> 1 day'
   const h = Math.floor(totalMinutes / 60)
   const m = Math.round(totalMinutes % 60)
   return m > 0 ? `${h}h ${m}m` : `${h}h`
@@ -109,8 +105,7 @@ function getCached(cityId) {
     if (!raw) return null
     const cache = JSON.parse(raw)
     const entry = cache[cityId]
-    if (!entry) return null
-    if (Date.now() - entry.ts > CACHE_TTL) return null
+    if (!entry || Date.now() - entry.ts > CACHE_TTL) return null
     return entry.data
   } catch { return null }
 }
@@ -121,18 +116,17 @@ function setCached(cityId, data) {
     const cache = raw ? JSON.parse(raw) : {}
     cache[cityId] = { ts: Date.now(), data }
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache))
-  // eslint-disable-next-line no-unused-vars, no-empty
-  } catch (err) {}
+  // eslint-disable-next-line no-empty
+  } catch {}
 }
 
 function getUVAlertContent(uvi, spf) {
-  if (uvi > 2 && uvi <= 5)  return { icon: '🧴', borderColor: '#fbbf24', iconBg: '#fef3c7', heading: 'Moderate UV — Take Care',          body: `UV levels are moderate right now. If you're heading outdoors for more than 20 minutes, it's a good idea to apply SPF ${spf}+ sunscreen and wear a hat.` }
-  if (uvi > 5 && uvi <= 7)  return { icon: '⚠️', borderColor: '#f97316', iconBg: '#fff7ed', heading: 'High UV — Protection Needed',       body: `UV levels are high today. Apply SPF ${spf}+ before going outside, seek shade between 10am and 4pm, and protect yourself with a hat and sunglasses.` }
-  if (uvi > 7 && uvi <= 10) return { icon: '🚨', borderColor: '#ef4444', iconBg: '#fef2f2', heading: 'Very High UV — Stay Protected',     body: `UV is very high. Minimise time outdoors, apply SPF ${spf}+, and cover exposed skin with clothing, a wide-brim hat, and sunglasses. Reapply sunscreen every 2 hours.` }
-  return                            { icon: '☠️', borderColor: '#a855f7', iconBg: '#faf5ff', heading: 'Extreme UV — Avoid Outdoor Exposure', body: `UV levels are extreme. It is strongly advised to stay indoors during peak hours. If you must go outside, wear SPF ${spf}+, full-coverage clothing, sunglasses, and a hat — and limit your time exposed.` }
+  if (uvi > 2 && uvi <= 5)  return { icon: '🧴', borderColor: '#fbbf24', iconBg: '#fef3c7', heading: 'Moderate UV — Take Care',           body: `UV levels are moderate. Apply SPF ${spf}+ sunscreen if heading outdoors for more than 20 minutes.` }
+  if (uvi > 5 && uvi <= 7)  return { icon: '⚠️', borderColor: '#f97316', iconBg: '#fff7ed', heading: 'High UV — Protection Needed',        body: `UV is high. Apply SPF ${spf}+, seek shade between 10am–4pm, and wear a hat and sunglasses.` }
+  if (uvi > 7 && uvi <= 10) return { icon: '🚨', borderColor: '#ef4444', iconBg: '#fef2f2', heading: 'Very High UV — Stay Protected',      body: `UV is very high. Minimise outdoor time, apply SPF ${spf}+, cover exposed skin and reapply every 2 hours.` }
+  return                            { icon: '☠️', borderColor: '#a855f7', iconBg: '#faf5ff', heading: 'Extreme UV — Avoid Outdoor Exposure', body: `UV is extreme. Stay indoors during peak hours. If outside, wear SPF ${spf}+, full coverage clothing, sunglasses and a hat.` }
 }
 
-// ── Main component ────────────────────────────────────────────
 export default function Home() {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
@@ -166,18 +160,12 @@ export default function Home() {
 
     const cached = getCached(cityId)
     if (cached && cached.safeSunTime !== undefined && cached.cityName) {
-      setData(cached)
-      maybeShowUVAlert(cached.uvIndex)
-      setLoading(false)
-      return
+      setData(cached); maybeShowUVAlert(cached.uvIndex); setLoading(false); return
     }
 
-    setLoading(true)
-    setError(null)
-
+    setLoading(true); setError(null)
     fetch('https://uv-level-monitor-anb3fvckcsfcf4a3.australiaeast-01.azurewebsites.net/update_status', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ city_name: cityName.toLowerCase(), timezone, sun_screen_efficiency: 0.3, skin_type: 3 })
     })
       .then(r => { if (!r.ok) throw new Error('API error'); return r.json() })
@@ -190,10 +178,8 @@ export default function Home() {
           spf: res.spf ?? 0,
           spfSuggestion: 'Broad-spectrum sunscreen is preferred.',
         }
-        setCached(cityId, parsed)
-        setData(parsed)
-        maybeShowUVAlert(parsed.uvIndex)
-        setLoading(false)
+        setCached(cityId, parsed); setData(parsed)
+        maybeShowUVAlert(parsed.uvIndex); setLoading(false)
       })
       .catch(() => { setError('Unable to load UV data. Please check your connection.'); setLoading(false) })
   }, [])
@@ -207,25 +193,19 @@ export default function Home() {
     if (!lastApplied) return
     const elapsed = Date.now() - lastApplied
     if (elapsed >= REAPPLY_MS && !notifiedRef.current) {
-      notifiedRef.current = true
-      setShowBanner(true)
+      notifiedRef.current = true; setShowBanner(true)
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('SunGuard ☀️', { body: 'Time to reapply your sunscreen! SPF 30+ recommended.', icon: '/favicon.svg' })
+        new Notification('SunGuard ☀️', { body: 'Time to reapply your sunscreen!', icon: '/favicon.svg' })
       } else if ('Notification' in window && Notification.permission !== 'denied') {
-        Notification.requestPermission().then(p => {
-          if (p === 'granted') new Notification('SunGuard ☀️', { body: 'Time to reapply your sunscreen! SPF 30+ recommended.', icon: '/favicon.svg' })
-        })
+        Notification.requestPermission().then(p => { if (p === 'granted') new Notification('SunGuard ☀️', { body: 'Time to reapply your sunscreen!', icon: '/favicon.svg' }) })
       }
     }
   }, [now, lastApplied])
 
   const handleDone = useCallback(() => {
-    const ts = Date.now()
-    setLastApplied(ts)
+    const ts = Date.now(); setLastApplied(ts)
     localStorage.setItem('sunsense_last_applied', String(ts))
-    setShowBanner(false)
-    setShowDonePopup(true)
-    notifiedRef.current = false
+    setShowBanner(false); setShowDonePopup(true); notifiedRef.current = false
   }, [])
 
   if (loading) return (
@@ -240,9 +220,7 @@ export default function Home() {
 
   if (error) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb' }}>
-      <div style={{ textAlign: 'center', maxWidth: '320px', padding: '0 24px' }}>
-        <p style={{ fontSize: '14px', color: '#ef4444', lineHeight: 1.6 }}>{error}</p>
-      </div>
+      <p style={{ fontSize: '14px', color: '#ef4444', textAlign: 'center', padding: '0 24px' }}>{error}</p>
     </div>
   )
 
@@ -251,24 +229,22 @@ export default function Home() {
   const elapsedMin = elapsed ? Math.floor(elapsed / 60000) : null
   const reapplyIn  = elapsed ? Math.max(0, Math.floor((REAPPLY_MS - elapsed) / 60000)) : null
   const progress   = elapsed ? Math.min(1, elapsed / REAPPLY_MS) : 0
-  const isOverdue  = elapsed && elapsed >= REAPPLY_MS
-  const almostTime = elapsed && elapsed >= REAPPLY_MS * 0.75
+  const isOverdue  = !!(elapsed && elapsed >= REAPPLY_MS)
+  const almostTime = !!(elapsed && elapsed >= REAPPLY_MS * 0.75)
 
-  const theme     = getUVTheme(data.uvIndex)
-  const weather   = getWeatherInfo(data.weatherLabel)
-  const videoSrc  = getWeatherVideo(data.weatherLabel)
-  const uvBarW    = `${Math.min(100, (data.uvIndex / 11) * 100)}%`
-  const uvDisplay = Math.round(data.uvIndex)
-  const dateStr   = now.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })
-  const timeStr   = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
-  const hasModal  = showBanner || showDonePopup || showUVAlert
-  const spfDisplay = (!data.spf || data.spf === 0)
+  const theme      = getUVTheme(data.uvIndex)
+  const weather    = getWeatherInfo(data.weatherLabel)
+  const videoSrc   = getWeatherVideo(data.weatherLabel)
+  const uvBarW     = `${Math.min(100, (data.uvIndex / 11) * 100)}%`
+  const uvDisplay  = Math.round(data.uvIndex)
+  const dateStr    = now.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })
+  const timeStr    = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
+  const hasModal   = showBanner || showDonePopup || showUVAlert
+  const spfZero    = !data.spf || data.spf === 0
   const uvAlertContent = showUVAlert ? getUVAlertContent(data.uvIndex, data.spf) : null
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb', position: 'relative' }}>
-
-      {/* ── Global styles ── */}
+    <div style={{ minHeight: '100vh', background: '#ffffff', position: 'relative' }}>
       <style>{`
         @keyframes slideDown {
           from { opacity: 0; transform: translateX(-50%) translateY(-16px); }
@@ -286,31 +262,39 @@ export default function Home() {
         }
         @keyframes btn-shake {
           0%, 100% { transform: translateX(0); }
-          20%       { transform: translateX(-5px); }
-          40%       { transform: translateX(5px); }
-          60%       { transform: translateX(-4px); }
-          80%       { transform: translateX(4px); }
+          20% { transform: translateX(-5px); }
+          40% { transform: translateX(5px); }
+          60% { transform: translateX(-4px); }
+          80% { transform: translateX(4px); }
         }
-        .home-grid {
+        @keyframes sg-spin { to { transform: rotate(360deg); } }
+        .home-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 20px;
+          gap: 0;
         }
-        .home-grid-bottom {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
+        .home-row > * {
+          border-right: 1px solid #f3f4f6;
+        }
+        .home-row > *:last-child {
+          border-right: none;
         }
         @media (max-width: 768px) {
-          .home-grid { grid-template-columns: 1fr !important; }
-          .home-grid-bottom { grid-template-columns: 1fr 1fr !important; }
+          .home-row {
+            grid-template-columns: 1fr !important;
+          }
+          .home-row > * {
+            border-right: none !important;
+            border-bottom: 1px solid #f3f4f6;
+          }
+          .home-row > *:last-child {
+            border-bottom: none;
+          }
         }
       `}</style>
 
       {/* ── Modal overlay ── */}
-      {hasModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 998, backdropFilter: 'blur(2px)' }} />
-      )}
+      {hasModal && <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 998, backdropFilter: 'blur(2px)' }} />}
 
       {/* ── UV Alert Modal ── */}
       {showUVAlert && uvAlertContent && (
@@ -319,7 +303,7 @@ export default function Home() {
             <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: uvAlertContent.iconBg, border: `1.5px solid ${uvAlertContent.borderColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', flexShrink: 0 }}>{uvAlertContent.icon}</div>
             <div>
               <p style={{ fontWeight: 700, fontSize: '16px', color: '#1c1917', lineHeight: 1.3, margin: 0 }}>{uvAlertContent.heading}</p>
-              <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px', margin: 0 }}>Current UV Index: <strong style={{ color: getUVTheme(data.uvIndex).color }}>{Math.round(data.uvIndex)} — {getUVTheme(data.uvIndex).label}</strong></p>
+              <p style={{ fontSize: '12px', color: '#9ca3af', margin: '4px 0 0' }}>UV: <strong style={{ color: theme.color }}>{uvDisplay} — {theme.label}</strong></p>
             </div>
           </div>
           <p style={{ fontSize: '14px', color: '#44403c', lineHeight: 1.65, margin: 0 }}>{uvAlertContent.body}</p>
@@ -332,12 +316,9 @@ export default function Home() {
         <div style={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, width: 'min(480px, 92vw)', background: '#fff', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '2px solid #f97316', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px', animation: 'slideDown 0.3s ease' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '28px' }}>🧴</span>
-            <div>
-              <p style={{ fontWeight: 700, fontSize: '16px', color: '#1c1917' }}>Time to reapply sunscreen!</p>
-              <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '2px' }}>It's been 2 hours. Protect your skin now.</p>
-            </div>
+            <div><p style={{ fontWeight: 700, fontSize: '16px', color: '#1c1917', margin: 0 }}>Time to reapply sunscreen!</p><p style={{ fontSize: '13px', color: '#6b7280', margin: '2px 0 0' }}>It's been 2 hours.</p></div>
           </div>
-          <button onClick={handleDone} style={{ background: 'linear-gradient(135deg, #f97316, #c2410c)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px', fontWeight: 700, fontSize: '15px', cursor: 'pointer', width: '100%', boxShadow: '0 4px 14px rgba(249,115,22,0.45)' }}>✓ Done — I've reapplied</button>
+          <button onClick={handleDone} style={{ background: 'linear-gradient(135deg, #f97316, #c2410c)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px', fontWeight: 700, fontSize: '15px', cursor: 'pointer', width: '100%' }}>✓ Done — I've reapplied</button>
         </div>
       )}
 
@@ -346,45 +327,37 @@ export default function Home() {
         <div style={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, width: 'min(480px, 92vw)', background: '#fff', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '2px solid #f97316', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px', animation: 'slideDown 0.3s ease' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '28px' }}>✅</span>
-            <div>
-              <p style={{ fontWeight: 700, fontSize: '16px', color: '#1c1917' }}>Great job!</p>
-              <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '2px', marginBottom: 0, lineHeight: 1.5 }}>You've reapplied your sunscreen.<br />Here are a few simple sun-safe tips:</p>
-            </div>
+            <div><p style={{ fontWeight: 700, fontSize: '16px', color: '#1c1917', margin: 0 }}>Great job!</p><p style={{ fontSize: '13px', color: '#6b7280', margin: '2px 0 0' }}>You've reapplied your sunscreen.</p></div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {UNIVERSAL_TIPS.map((tip, i) => (
-              <div key={i} style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '10px 12px', fontSize: '13px', color: '#9a3412', lineHeight: 1.45 }}>• {tip}</div>
-            ))}
+            {UNIVERSAL_TIPS.map((tip, i) => <div key={i} style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '10px 12px', fontSize: '13px', color: '#9a3412', lineHeight: 1.45 }}>• {tip}</div>)}
           </div>
           <button onClick={() => setShowDonePopup(false)} style={{ background: 'linear-gradient(135deg, #f97316, #c2410c)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px', fontWeight: 600, fontSize: '14px', cursor: 'pointer', width: '100%' }}>Got it</button>
         </div>
       )}
 
       {/* ── Hero ── */}
-      <div style={{ position: 'relative', height: '260px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-        <video key={videoSrc} autoPlay muted loop playsInline style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0, pointerEvents: 'none' }}>
+      <div style={{ position: 'relative', height: '260px', overflow: 'hidden' }}>
+        <video key={videoSrc} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0, pointerEvents: 'none' }}>
           <source src={videoSrc} type="video/mp4" />
         </video>
         <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: theme.overlayColor, pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '80px', zIndex: 2, background: 'linear-gradient(transparent, rgba(0,0,0,0.25))', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', inset: 0, zIndex: 3, display: 'flex', alignItems: 'center', padding: '0 48px' }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 3, display: 'flex', alignItems: 'center', padding: '0 clamp(20px, 4vw, 48px)' }}>
           <div style={{ maxWidth: '1280px', margin: '0 auto', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '13px', marginBottom: '8px' }}>{dateStr} · {timeStr}</p>
-              <h1 style={{ color: '#fff', fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: 700, lineHeight: 1.1, fontFamily: 'Georgia, serif', margin: '0 0 8px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-                {data.cityName}
-              </h1>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
-                <span style={{ color: 'rgba(255,255,255,0.95)', fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 300, textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>{data.temperature}°</span>
-                <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '15px' }}>{weather.desc}</span>
+              <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '13px', margin: '0 0 8px' }}>{dateStr} · {timeStr}</p>
+              <h1 style={{ color: '#fff', fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 700, fontFamily: 'Georgia, serif', margin: '0 0 8px', textShadow: '0 2px 8px rgba(0,0,0,0.3)', lineHeight: 1.1 }}>{data.cityName}</h1>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                <span style={{ color: 'rgba(255,255,255,0.95)', fontSize: 'clamp(24px, 4vw, 38px)', fontWeight: 300 }}>{data.temperature}°</span>
+                <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '14px' }}>{weather.desc}</span>
               </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '12px' }}>
-              <span style={{ fontSize: '64px', lineHeight: 1, filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.3))' }}>{weather.icon}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+              <span style={{ fontSize: 'clamp(40px, 6vw, 64px)', lineHeight: 1, filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.3))' }}>{weather.icon}</span>
               {data.uvIndex > 3 && (
-                <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '10px', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '13px' }}>⚠️</span>
-                  <span style={{ color: '#fff', fontSize: '12px', fontWeight: 600 }}>UV Protection Recommended</span>
+                <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '10px', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '12px' }}>⚠️</span>
+                  <span style={{ color: '#fff', fontSize: '11px', fontWeight: 600 }}>UV Protection Recommended</span>
                 </div>
               )}
             </div>
@@ -392,23 +365,18 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── Card grid ── */}
-      <div style={{ maxWidth: '1280px', margin: '28px auto', padding: '0 48px' }}>
+      {/* ── Content: no cards, full-width sections separated by dividers ── */}
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 clamp(20px, 4vw, 48px)' }}>
 
-        {/* Row 1: UV Index + Reapply Reminder */}
-        <div className="home-grid" style={{ marginBottom: '20px' }}>
+        {/* Row 1: UV Index | Reapply Reminder */}
+        <div className="home-row" style={{ borderBottom: '1px solid #f3f4f6' }}>
 
-          {/* UV Index card */}
-          <Card>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div>
-                <Label>☀ UV INDEX</Label>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginTop: '6px' }}>
-                  <span style={{ fontSize: '56px', fontWeight: 700, color: theme.color, lineHeight: 1 }}>{uvDisplay}</span>
-                  <span style={{ fontSize: '13px', fontWeight: 600, padding: '3px 12px', borderRadius: '20px', color: '#fff', background: theme.color }}>{theme.label}</span>
-                </div>
-              </div>
-              <div style={{ width: '52px', height: '52px', borderRadius: '50%', border: `2px solid ${theme.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', background: '#fff' }}>☀️</div>
+          {/* UV Index section */}
+          <div style={{ padding: '32px 32px 32px 0' }}>
+            <p style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 12px' }}>☀ UV Index</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '16px' }}>
+              <span style={{ fontSize: '64px', fontWeight: 700, color: theme.color, lineHeight: 1 }}>{uvDisplay}</span>
+              <span style={{ fontSize: '14px', fontWeight: 600, padding: '4px 14px', borderRadius: '20px', color: '#fff', background: theme.color }}>{theme.label}</span>
             </div>
             <div style={{ position: 'relative', marginBottom: '8px' }}>
               <div style={{ background: '#e5e7eb', borderRadius: '99px', height: '10px', overflow: 'hidden' }}>
@@ -418,201 +386,115 @@ export default function Home() {
                 <div key={i} style={{ position: 'absolute', top: 0, left: `${pct * 100}%`, width: '1px', height: '10px', background: 'rgba(255,255,255,0.6)' }} />
               ))}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginBottom: '20px' }}>
               <span style={{ color: '#4eb400', fontWeight: 600 }}>Low</span>
               <span style={{ color: '#f8b600', fontWeight: 600 }}>Moderate</span>
               <span style={{ color: '#f85900', fontWeight: 600 }}>High</span>
               <span style={{ color: '#d8001d', fontWeight: 600 }}>V.High</span>
               <span style={{ color: '#b54cff', fontWeight: 600 }}>Extreme</span>
             </div>
-            {/* Inline UV tip */}
+            {/* Inline tip */}
             {(() => {
               const uvi = data.uvIndex; const spf = data.spf
               if (uvi <= 2) return <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#166534' }}>✅ <strong>Safe now.</strong> UV is low — no sunscreen needed for short outdoor stays.</div>
-              if (uvi <= 5) return <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#92400e' }}>🧴 <strong>Apply SPF {spf}+.</strong> UV is moderate — wear sunscreen and a hat for extended outdoor time.</div>
+              if (uvi <= 5) return <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#92400e' }}>🧴 <strong>Apply SPF {spf}+.</strong> UV is moderate — sunscreen recommended for extended outdoor time.</div>
               if (uvi <= 7) return <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#92400e' }}>⚠️ <strong>Protection essential.</strong> UV is high — apply SPF {spf}+, seek shade between 10am–4pm.</div>
               if (uvi <= 10) return <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#991b1b' }}>🚨 <strong>High risk.</strong> UV is very high — minimise outdoor exposure, apply SPF {spf}+.</div>
               return <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#7e22ce' }}>☠️ <strong>Extreme UV.</strong> Avoid outdoors if possible. Apply SPF {spf}+, full coverage clothing.</div>
             })()}
-          </Card>
+          </div>
 
-          {/* Reapply Reminder card */}
-          <Card>
-            <Label>⏱ REAPPLY REMINDER</Label>
-
+          {/* Reapply Reminder section */}
+          <div style={{ padding: '32px 0 32px 32px' }}>
+            <p style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 16px' }}>⏱ Reapply Reminder</p>
             {lastApplied ? (
               <>
-                {/* Timer stats row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', margin: '12px 0 10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '12px' }}>
                   <div>
-                    <p style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '2px' }}>Last applied</p>
-                    <p style={{ fontSize: '28px', fontWeight: 700, color: '#1c1917' }}>{elapsedMin} min ago</p>
+                    <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 2px' }}>Last applied</p>
+                    <p style={{ fontSize: '32px', fontWeight: 700, color: '#1c1917', lineHeight: 1 }}>{elapsedMin} min ago</p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '2px' }}>Reapply in</p>
-                    <p style={{ fontSize: '28px', fontWeight: 700, color: isOverdue ? '#dc2626' : '#f97316' }}>
-                      {isOverdue ? 'Now!' : `${reapplyIn} min`}
-                    </p>
+                    <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 2px' }}>Reapply in</p>
+                    <p style={{ fontSize: '32px', fontWeight: 700, color: isOverdue ? '#dc2626' : '#f97316', lineHeight: 1 }}>{isOverdue ? 'Now!' : `${reapplyIn} min`}</p>
                   </div>
                 </div>
-
-                {/* Progress bar */}
-                <div style={{ background: '#f3f4f6', borderRadius: '99px', height: '8px', marginBottom: '16px', overflow: 'hidden' }}>
+                <div style={{ background: '#f3f4f6', borderRadius: '99px', height: '8px', marginBottom: '14px', overflow: 'hidden' }}>
                   <div style={{ width: `${progress * 100}%`, height: '100%', borderRadius: '99px', background: isOverdue ? '#dc2626' : almostTime ? '#f97316' : '#fcd34d', transition: 'width 1s linear' }} />
                 </div>
-
-                {/* Status banner — changes by urgency */}
                 {isOverdue ? (
-                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '18px' }}>🚨</span>
-                    <p style={{ fontSize: '13px', color: '#dc2626', fontWeight: 600, margin: 0 }}>Overdue — reapply sunscreen now!</p>
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>🚨</span><p style={{ fontSize: '13px', color: '#dc2626', fontWeight: 600, margin: 0 }}>Overdue — reapply sunscreen now!</p>
                   </div>
                 ) : almostTime ? (
-                  <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '18px' }}>⚠️</span>
-                    <p style={{ fontSize: '13px', color: '#92400e', fontWeight: 600, margin: 0 }}>Almost time — get your sunscreen ready</p>
+                  <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>⚠️</span><p style={{ fontSize: '13px', color: '#92400e', fontWeight: 600, margin: 0 }}>Almost time — get your sunscreen ready</p>
                   </div>
                 ) : (
-                  <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '16px' }}>
-                    SPF 30+ recommended every 2 hours outdoors
-                  </p>
+                  <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '14px' }}>SPF 30+ recommended every 2 hours outdoors</p>
                 )}
-
-                {/* Done button — 3 visual states */}
-                <button
-                  onClick={handleDone}
-                  style={{
-                    width: '100%',
-                    padding: isOverdue ? '16px' : '14px',
-                    borderRadius: '14px',
-                    border: 'none',
-                    background: isOverdue
-                      ? 'linear-gradient(135deg, #dc2626, #991b1b)'
-                      : 'linear-gradient(135deg, #f97316, #c2410c)',
-                    color: '#fff',
-                    fontSize: isOverdue ? '17px' : '15px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    letterSpacing: '0.02em',
-                    animation: isOverdue
-                      ? 'pulse-ring-red 1.4s ease infinite, btn-shake 2.5s ease infinite'
-                      : almostTime
-                      ? 'pulse-ring 1.8s ease infinite'
-                      : 'none',
-                    boxShadow: isOverdue
-                      ? '0 6px 20px rgba(220,38,38,0.5)'
-                      : '0 4px 16px rgba(249,115,22,0.4)',
-                    transition: 'transform 0.1s',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
-                >
-                  {isOverdue ? '🚨 Reapply Now — I\'ve Done It' : '✓ Done — I\'ve Reapplied'}
+                <button onClick={handleDone} style={{ width: '100%', padding: isOverdue ? '16px' : '14px', borderRadius: '12px', border: 'none', background: isOverdue ? 'linear-gradient(135deg,#dc2626,#991b1b)' : 'linear-gradient(135deg,#f97316,#c2410c)', color: '#fff', fontSize: isOverdue ? '16px' : '15px', fontWeight: 700, cursor: 'pointer', animation: isOverdue ? 'pulse-ring-red 1.4s ease infinite,btn-shake 2.5s ease infinite' : almostTime ? 'pulse-ring 1.8s ease infinite' : 'none', boxShadow: isOverdue ? '0 6px 20px rgba(220,38,38,0.5)' : '0 4px 16px rgba(249,115,22,0.4)', transition: 'transform 0.1s' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}>
+                  {isOverdue ? "🚨 Reapply Now — I've Done It" : "✓ Done — I've Reapplied"}
                 </button>
               </>
             ) : (
-              /* ── No record yet: first-time state ── */
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                {/* Prominent instruction banner */}
-                <div style={{ background: 'linear-gradient(135deg, #fff7ed, #ffedd5)', border: '1px solid #fed7aa', borderRadius: '12px', padding: '16px 18px', margin: '12px 0 20px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                  <span style={{ fontSize: '24px', flexShrink: 0, marginTop: '2px' }}>🧴</span>
+                <div style={{ background: 'linear-gradient(135deg,#fff7ed,#ffedd5)', border: '1px solid #fed7aa', borderRadius: '12px', padding: '16px 18px', marginBottom: '20px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <span style={{ fontSize: '22px', flexShrink: 0, marginTop: '2px' }}>🧴</span>
                   <div>
-                    <p style={{ fontSize: '14px', fontWeight: 700, color: '#9a3412', margin: '0 0 4px' }}>
-                      Applied sunscreen? Tap to start your reminder
-                    </p>
-                    <p style={{ fontSize: '12px', color: '#b45309', margin: 0, lineHeight: 1.5 }}>
-                      SunGuard will alert you when it's time to reapply — every 2 hours for maximum protection.
-                    </p>
+                    <p style={{ fontSize: '14px', fontWeight: 700, color: '#9a3412', margin: '0 0 4px' }}>Applied sunscreen? Tap to start your reminder</p>
+                    <p style={{ fontSize: '12px', color: '#b45309', margin: 0, lineHeight: 1.5 }}>SunGuard will alert you every 2 hours for maximum protection.</p>
                   </div>
                 </div>
-
-                {/* Large prominent button */}
-                <button
-                  onClick={handleDone}
-                  style={{
-                    width: '100%',
-                    padding: '18px',
-                    borderRadius: '14px',
-                    border: 'none',
-                    background: 'linear-gradient(135deg, #f97316, #c2410c)',
-                    color: '#fff',
-                    fontSize: '17px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    letterSpacing: '0.02em',
-                    boxShadow: '0 6px 24px rgba(249,115,22,0.50)',
-                    animation: 'pulse-ring 1.8s ease infinite',
-                    transition: 'transform 0.1s',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
-                >
+                <button onClick={handleDone} style={{ width: '100%', padding: '18px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#f97316,#c2410c)', color: '#fff', fontSize: '16px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 24px rgba(249,115,22,0.50)', animation: 'pulse-ring 1.8s ease infinite', transition: 'transform 0.1s' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}>
                   ☀️ I've Applied Sunscreen
                 </button>
               </div>
             )}
-          </Card>
+          </div>
         </div>
 
-        {/* Row 2: SPF + Safe Sun Time */}
-        <div className="home-grid-bottom">
-          <Card>
-            <Label>🧴 SPF RECOMMENDATION</Label>
-            {spfDisplay ? (
+        {/* Row 2: SPF | Safe Sun Time */}
+        <div className="home-row">
+          <div style={{ padding: '28px 32px 28px 0' }}>
+            <p style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 10px' }}>🧴 SPF Recommendation</p>
+            {spfZero ? (
               <>
-                <p style={{ fontSize: '36px', fontWeight: 700, color: '#4eb400', margin: '8px 0 4px', lineHeight: 1 }}>No Need</p>
-                <p style={{ fontSize: '13px', color: '#78716c', fontWeight: 500, marginBottom: '6px' }}>UV level is safe</p>
+                <p style={{ fontSize: '40px', fontWeight: 700, color: '#4eb400', margin: '0 0 4px', lineHeight: 1 }}>No Need</p>
+                <p style={{ fontSize: '13px', color: '#78716c', margin: '0 0 4px' }}>UV level is safe</p>
                 <p style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>No sunscreen required at this UV level.</p>
               </>
             ) : (
               <>
-                <p style={{ fontSize: '48px', fontWeight: 700, color: '#f97316', margin: '8px 0 4px', lineHeight: 1 }}>{data.spf}+</p>
-                <p style={{ fontSize: '13px', color: '#78716c', fontWeight: 500, marginBottom: '6px' }}>Recommended SPF</p>
+                <p style={{ fontSize: '48px', fontWeight: 700, color: '#f97316', margin: '0 0 4px', lineHeight: 1 }}>{data.spf}+</p>
+                <p style={{ fontSize: '13px', color: '#78716c', margin: '0 0 4px' }}>Recommended SPF</p>
                 <p style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>{data.spfSuggestion}</p>
               </>
             )}
-          </Card>
+          </div>
 
-          <Card>
-            <Label>🛡 SAFE SUN TIME</Label>
+          <div style={{ padding: '28px 0 28px 32px' }}>
+            <p style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 10px' }}>🛡 Safe Sun Time</p>
             {Math.round(data.uvIndex) === 0 ? (
               <>
-                <p style={{ fontSize: '36px', fontWeight: 700, color: '#4eb400', margin: '8px 0 4px', lineHeight: 1 }}>Safe ✓</p>
-                <p style={{ fontSize: '12px', color: '#4eb400', marginTop: '6px', lineHeight: 1.5, fontWeight: 500 }}>UV is zero — you're free to enjoy the outdoors!</p>
+                <p style={{ fontSize: '40px', fontWeight: 700, color: '#4eb400', margin: '0 0 4px', lineHeight: 1 }}>Safe ✓</p>
+                <p style={{ fontSize: '12px', color: '#4eb400', fontWeight: 500, lineHeight: 1.5 }}>UV is zero — enjoy the outdoors!</p>
               </>
             ) : (
               <>
-                <p style={{ fontSize: '13px', color: '#9ca3af', margin: '8px 0 2px' }}>Less than</p>
-                <p style={{ fontSize: '40px', fontWeight: 700, color: '#1c1917', lineHeight: 1 }}>{formatTime(data.safeSunTime)}</p>
-                <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px', lineHeight: 1.5 }}>
-                  {spfDisplay ? 'No sunscreen applied' : `Assumes SPF ${data.spf}+ applied and reapplied every two hours`}
+                <p style={{ fontSize: '13px', color: '#9ca3af', margin: '0 0 2px' }}>Less than</p>
+                <p style={{ fontSize: '44px', fontWeight: 700, color: '#1c1917', margin: '0 0 4px', lineHeight: 1 }}>{formatTime(data.safeSunTime)}</p>
+                <p style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>
+                  {spfZero ? 'No sunscreen applied' : `Assumes SPF ${data.spf}+ applied and reapplied every two hours`}
                 </p>
               </>
             )}
-          </Card>
+          </div>
         </div>
 
       </div>
 
-      {/* ── Footer ── */}
       <Footer />
-
     </div>
-  )
-}
-
-function Card({ children }) {
-  return (
-    <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f3f4f6' }}>
-      {children}
-    </div>
-  )
-}
-
-function Label({ children }) {
-  return (
-    <p style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>
-      {children}
-    </p>
   )
 }

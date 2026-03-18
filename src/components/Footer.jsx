@@ -15,78 +15,62 @@ const REFERENCES = [
 export default function Footer() {
   return (
     <footer style={{
-      maxWidth: '1280px',
-      margin: '0 auto',
-      padding: '28px 48px 40px',
-      borderTop: '1px solid #e5e7eb',
+      width: '100%',
+      background: '#f9fafb',
+      borderTop: '2px solid #e5e7eb',
+      padding: '28px 24px 36px',
+      marginTop: '8px',
     }}>
+      <div style={{ maxWidth: '720px', margin: '0 auto', textAlign: 'center' }}>
 
-      {/* Copyright — centered, bold, black */}
-      <p style={{
-        textAlign: 'center',
-        fontSize: '13px',
-        fontWeight: 700,
-        color: '#1c1917',
-        margin: '0 0 20px',
-        lineHeight: 1.6,
-      }}>
-        © 2025 Monash University FIT5120 Team TE01. All rights reserved.
-      </p>
+        {/* Copyright */}
+        <p style={{
+          fontSize: '12px',
+          color: '#78716c',
+          margin: '0 0 20px',
+          lineHeight: 1.6,
+        }}>
+          © 2025 Monash University FIT5120 Team TE01. All rights reserved.
+        </p>
 
-      {/* Divider */}
-      <div style={{ height: '1px', background: '#f3f4f6', marginBottom: '16px' }} />
+        {/* Divider */}
+        <div style={{ height: '1px', background: '#e5e7eb', marginBottom: '20px' }} />
 
-      {/* References label */}
-      <p style={{
-        fontSize: '10px',
-        fontWeight: 700,
-        color: '#9ca3af',
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        marginBottom: '12px',
-      }}>
-        References
-      </p>
+        {/* Reference items — centered */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {REFERENCES.map((ref, i) => (
+            <div key={i}>
+              <p style={{
+                fontSize: '11px',
+                color: '#78716c',
+                lineHeight: 1.7,
+                margin: '0 0 4px',
+              }}>
+                {ref.citation}
+              </p>
+              <a
+                href={ref.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: '10px',
+                  color: '#94a3b8',
+                  textDecoration: 'none',
+                  wordBreak: 'break-all',
+                  lineHeight: 1.6,
+                  display: 'block',
+                  transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#f97316' }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#94a3b8' }}
+              >
+                {ref.url}
+              </a>
+            </div>
+          ))}
+        </div>
 
-      {/* Reference list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {REFERENCES.map((ref, i) => (
-          <div key={i}>
-            <p style={{
-              fontSize: '11px',
-              color: '#78716c',
-              lineHeight: 1.6,
-              margin: '0 0 3px',
-            }}>
-              {ref.citation}
-            </p>
-            <a
-              href={ref.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                fontSize: '10px',
-                color: '#94a3b8',
-                textDecoration: 'none',
-                wordBreak: 'break-all',
-                lineHeight: 1.5,
-                display: 'block',
-                transition: 'color 0.15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#f97316' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#94a3b8' }}
-            >
-              {ref.url}
-            </a>
-          </div>
-        ))}
       </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          footer { padding: 24px 20px 32px !important; }
-        }
-      `}</style>
     </footer>
   )
 }
