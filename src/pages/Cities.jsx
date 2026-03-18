@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const SUPPORTED_CITIES = [
   { name: 'Melbourne',      timezone: 'Australia/Melbourne', lat: -37.8136, lng: 144.9631 },
@@ -134,6 +135,7 @@ export default function Cities() {
   const [dropdown, setDropdown]     = useState([])
   const [deletingId, setDeletingId] = useState(null)
   const [deleteWarning, setDeleteWarning] = useState(false)
+  const [selectedToast, setSelectedToast] = useState(null) // { cityName }
 
   useEffect(() => {
     cities.forEach(async (city) => {
@@ -176,7 +178,19 @@ export default function Cities() {
     }, 280)
   }, [cities, selectedId])
 
-  const handleSelect = useCallback((id) => { setSelectedId(id); saveSelectedId(id) }, [])
+  const navigate      = useNavigate()
+  const toastTimerRef = useRef(null)
+
+  const handleSelect = useCallback((id) => {
+    setSelectedId(id)
+    saveSelectedId(id)
+    const city = cities.find(c => c.id === id)
+    if (city) {
+      setSelectedToast({ cityName: city.name })
+      clearTimeout(toastTimerRef.current)
+      toastTimerRef.current = setTimeout(() => setSelectedToast(null), 5000)
+    }
+  }, [cities])
 
   const isFull = cities.length >= 3
 
@@ -191,7 +205,55 @@ export default function Cities() {
         @media (max-width: 900px) {
           .cities-grid { grid-template-columns: 1fr !important; }
         }
+        @keyframes toast-in {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toast-out {
+          from { opacity: 1; }
+          to   { opacity: 0; }
+        }
       `}</style>
+
+      {/* ── Selection success toast ── */}
+      {selectedToast && (
+        <div style={{
+          position: 'fixed', bottom: '32px', left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000,
+          background: '#1c1917',
+          borderRadius: '16px',
+          padding: '16px 22px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+          display: 'flex', alignItems: 'center', gap: '16px',
+          animation: 'toast-in 0.28s ease',
+          minWidth: '320px', maxWidth: '92vw',
+        }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f97316', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>✓</div>
+          <div style={{ flex: 1 }}>
+            <p style={{ color: '#fff', fontSize: '14px', fontWeight: 600, margin: '0 0 2px' }}>
+              Switched to {selectedToast.cityName}
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '12px', margin: 0 }}>
+              View updated UV data on
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+            <button
+              onClick={() => { setSelectedToast(null); navigate('/home') }}
+              style={{ padding: '7px 14px', borderRadius: '8px', border: 'none', background: '#f97316', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+            >Home</button>
+            <button
+              onClick={() => { setSelectedToast(null); navigate('/detail') }}
+              style={{ padding: '7px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.8)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+            >UV Detail</button>
+          </div>
+          <button
+            onClick={() => setSelectedToast(null)}
+            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: '16px', padding: '4px', flexShrink: 0, lineHeight: 1 }}
+          >✕</button>
+        </div>
+      )}
 
       {/* Hero */}
       <div style={{ position: 'relative', height: '220px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
@@ -256,6 +318,28 @@ export default function Cities() {
               <p style={{ fontSize: '13px', fontWeight: 600, color: '#92400e', margin: 0 }}>UV varies across Australia</p>
             </div>
             <p style={{ fontSize: '13px', color: '#78350f', lineHeight: 1.6, margin: 0 }}>Cities in Queensland and the NT regularly reach <strong>Extreme (11+)</strong> levels. Always check local UV before heading outdoors.</p>
+          </div>
+        </div>
+
+        {/* How-to-select guide banner */}
+        <div style={{
+          background: 'linear-gradient(135deg, #fff7ed, #ffedd5)',
+          border: '1px solid #fed7aa',
+          borderRadius: '14px',
+          padding: '14px 20px',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px',
+        }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f97316', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>👆</div>
+          <div>
+            <p style={{ fontSize: '13px', fontWeight: 700, color: '#9a3412', margin: '0 0 2px' }}>
+              How to select your active city
+            </p>
+            <p style={{ fontSize: '12px', color: '#b45309', margin: 0, lineHeight: 1.6 }}>
+              Click any city card below to set it as your active location. The selected city will be used across the <strong>Home</strong> and <strong>UV Detail</strong> pages.
+            </p>
           </div>
         </div>
 
@@ -329,9 +413,12 @@ export default function Cities() {
           ))}
         </div>
 
-        <p style={{ textAlign: 'center', fontSize: '12px', color: '#d1d5db', marginTop: '20px' }}>
-          Click a city card to set it as your active location
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '20px' }}>
+          <span style={{ fontSize: '12px', color: '#9ca3af' }}>After selecting a city, view updated data on</span>
+          <button onClick={() => navigate('/home')} style={{ fontSize: '12px', fontWeight: 600, color: '#f97316', background: 'none', border: 'none', cursor: 'pointer', padding: '0', textDecoration: 'underline' }}>Home</button>
+          <span style={{ fontSize: '12px', color: '#9ca3af' }}>or</span>
+          <button onClick={() => navigate('/detail')} style={{ fontSize: '12px', fontWeight: 600, color: '#f97316', background: 'none', border: 'none', cursor: 'pointer', padding: '0', textDecoration: 'underline' }}>UV Detail</button>
+        </div>
       </div>
     </div>
   )
