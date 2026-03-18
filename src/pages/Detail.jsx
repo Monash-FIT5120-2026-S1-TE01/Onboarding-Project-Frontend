@@ -313,16 +313,7 @@ export default function Detail() {
 
         {/* Row 1: UV Trend — full width card */}
         <div style={{ ...card, marginBottom:'20px' }}>
-          <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'16px',flexWrap:'wrap',gap:'8px' }}>
-            <div>
-              <p style={cardLabel}>📈 Today's UV Trend</p>
-              <p style={{fontSize:'15px',color:'#57534e',margin:0}}>Peak: <strong>{data.peakUV}</strong> ({data.peakTime}) · Lowest: <strong>{data.lowestUV}</strong> ({data.lowestTime})</p>
-            </div>
-            <div style={{ textAlign:'right' }}>
-              <p style={{ fontSize:'12px',color:'#9ca3af',margin:'0 0 2px' }}>Current time</p>
-              <p style={{ fontSize:'16px',fontWeight:700,color:'#1c1917',margin:0 }}>{realTimeStr}</p>
-            </div>
-          </div>
+          <p style={cardLabel}>📈 Today's UV Trend</p>
 
           {/* Dark chart */}
           <div style={{borderRadius:'12px',overflow:'hidden',background:'linear-gradient(180deg,#23252d 0%,#2c2f37 100%)',boxShadow:'0 8px 24px rgba(0,0,0,0.16)',border:'1px solid #3f3f46',marginBottom:'20px'}}>
@@ -334,24 +325,10 @@ export default function Detail() {
             </div>
           </div>
 
-          {/* Now summary + peak/low inline */}
-          <div style={{ display:'grid',gridTemplateColumns:'1fr auto',gap:'20px',alignItems:'start' }}>
-            <div>
-              <p style={{fontSize:'16px',fontWeight:700,color:'#1c1917',marginBottom:'6px'}}>Now, {realTimeStr}</p>
-              <p style={{fontSize:'15px',color:'#44403c',lineHeight:1.7,margin:0}}>{data.nowSummary}</p>
-            </div>
-            <div style={{ display:'flex',gap:'20px',flexShrink:0 }}>
-              <div style={{ textAlign:'center',background:'#f9fafb',borderRadius:'12px',padding:'12px 20px',border:'1px solid #e5e7eb' }}>
-                <p style={{ fontSize:'11px',color:'#9ca3af',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.07em',margin:'0 0 4px' }}>Peak</p>
-                <p style={{ fontSize:'28px',fontWeight:700,color:theme.color,lineHeight:1,margin:'0 0 2px' }}>{data.peakUV}</p>
-                <p style={{ fontSize:'12px',color:'#6b7280',margin:0 }}>{data.peakTime}</p>
-              </div>
-              <div style={{ textAlign:'center',background:'#f9fafb',borderRadius:'12px',padding:'12px 20px',border:'1px solid #e5e7eb' }}>
-                <p style={{ fontSize:'11px',color:'#9ca3af',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.07em',margin:'0 0 4px' }}>Lowest</p>
-                <p style={{ fontSize:'28px',fontWeight:700,color:'#4eb400',lineHeight:1,margin:'0 0 2px' }}>{data.lowestUV}</p>
-                <p style={{ fontSize:'12px',color:'#6b7280',margin:0 }}>{data.lowestTime}</p>
-              </div>
-            </div>
+          {/* Now summary — single clean line */}
+          <div style={{ borderTop:'1px solid #f3f4f6', paddingTop:'16px' }}>
+            <p style={{fontSize:'16px',fontWeight:700,color:'#1c1917',marginBottom:'6px'}}>Now, {realTimeStr}</p>
+            <p style={{fontSize:'15px',color:'#44403c',lineHeight:1.7,margin:0}}>{data.nowSummary}</p>
           </div>
         </div>
 
@@ -361,7 +338,9 @@ export default function Detail() {
           {/* Protection Advice */}
           <div style={card}>
             <p style={cardLabel}>🛡️ Protection Advice</p>
-            <div style={{borderRadius:'14px',background:theme.adviceBg,border:`1px solid ${theme.adviceBorder}`,padding:'18px 20px',marginBottom:'16px'}}>
+
+            {/* Main advice block */}
+            <div style={{borderRadius:'14px',background:theme.adviceBg,border:`1px solid ${theme.adviceBorder}`,padding:'18px 20px',marginBottom:'14px'}}>
               <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'10px',flexWrap:'wrap',marginBottom:'10px'}}>
                 <h3 style={{fontSize:'17px',fontWeight:700,color:theme.adviceText,margin:0}}>{pa.title}</h3>
                 <span style={{fontSize:'11px',fontWeight:600,color:theme.adviceText,background:'rgba(255,255,255,0.45)',padding:'3px 9px',borderRadius:'999px',whiteSpace:'nowrap'}}>
@@ -369,33 +348,49 @@ export default function Detail() {
                 </span>
               </div>
               <p style={{fontSize:'14px',color:theme.adviceText,lineHeight:1.7,margin:'0 0 12px'}}>{pa.description}</p>
+
+              {/* spfCase === none: show 5 tips */}
               {pa.spfCase==='none' && (
                 <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
                   {pa.tips.map((tip,i)=><div key={i} style={{background:'rgba(255,255,255,0.5)',border:`1px solid ${theme.adviceBorder}`,borderRadius:'8px',padding:'9px 12px',fontSize:'13px',color:theme.adviceText,lineHeight:1.5}}>{tip}</div>)}
                 </div>
               )}
+
+              {/* spfCase !== none: usage amounts */}
               {pa.spfCase!=='none' && pa.recommendedAmount.length>0 && (
                 <div>
-                  <p style={{fontSize:'14px',fontWeight:600,color:theme.adviceText,marginBottom:'6px'}}>Recommended amount</p>
-                  <ul style={{margin:0,paddingLeft:'18px',color:theme.adviceText}}>
-                    {pa.recommendedAmount.map((item,i)=><li key={i} style={{fontSize:'13px',lineHeight:1.8}}>{item}</li>)}
-                  </ul>
-                  <p style={{fontSize:'11px',color:theme.adviceText,opacity:0.6,marginTop:'10px',lineHeight:1.5}}>* Amounts estimated based on the Mosteller formula.</p>
+                  <p style={{fontSize:'13px',fontWeight:600,color:theme.adviceText,marginBottom:'8px'}}>Recommended application amount</p>
+                  <div style={{display:'flex',flexDirection:'column',gap:'6px',marginBottom:'10px'}}>
+                    {pa.recommendedAmount.map((item,i)=>(
+                      <div key={i} style={{background:'rgba(255,255,255,0.5)',border:`1px solid ${theme.adviceBorder}`,borderRadius:'8px',padding:'9px 12px',fontSize:'13px',color:theme.adviceText,lineHeight:1.5}}>{item}</div>
+                    ))}
+                  </div>
+                  <p style={{fontSize:'11px',color:theme.adviceText,opacity:0.6,margin:0,lineHeight:1.5}}>* Amounts estimated based on the Mosteller formula.</p>
                 </div>
               )}
             </div>
-            {/* SPF quick info */}
-            {data.spf > 0 && (
-              <div style={{ background:'#f9fafb',border:'1px solid #e5e7eb',borderRadius:'12px',padding:'14px 16px' }}>
-                <p style={{ fontSize:'12px',fontWeight:600,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.06em',margin:'0 0 10px' }}>Application Guide</p>
-                <div style={{ display:'flex',justifyContent:'space-between',flexWrap:'wrap',gap:'12px' }}>
-                  {[{label:'Apply before',val:'20 min'},{label:'Reapply every',val:'2 hours'},{label:'Min amount',val:'2mg/cm²'}].map((item,i)=>(
-                    <div key={i}>
-                      <p style={{fontSize:'11px',color:'#9ca3af',margin:'0 0 2px'}}>{item.label}</p>
-                      <p style={{fontSize:'14px',fontWeight:600,color:'#1c1917',margin:0}}>{item.val}</p>
+
+            {/* Application Guide — shown when SPF needed; fills space to balance with none case */}
+            {pa.spfCase!=='none' && (
+              <div style={{ background:'#f9fafb',border:'1px solid #e5e7eb',borderRadius:'12px',padding:'16px 18px',marginBottom:'14px' }}>
+                <p style={{ fontSize:'12px',fontWeight:600,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.06em',margin:'0 0 12px' }}>Application Guide</p>
+                <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'12px' }}>
+                  {[{label:'Apply before',val:'20 min',sub:'going outdoors'},{label:'Reapply every',val:'2 hrs',sub:'or after swimming'},{label:'Min amount',val:'2 mg/cm²',sub:'for full coverage'}].map((item,i)=>(
+                    <div key={i} style={{textAlign:'center',background:'#fff',borderRadius:'10px',padding:'12px 8px',border:'1px solid #e5e7eb'}}>
+                      <p style={{fontSize:'11px',color:'#9ca3af',margin:'0 0 4px',fontWeight:500}}>{item.label}</p>
+                      <p style={{fontSize:'18px',fontWeight:700,color:'#1c1917',lineHeight:1,margin:'0 0 3px'}}>{item.val}</p>
+                      <p style={{fontSize:'10px',color:'#9ca3af',margin:0,lineHeight:1.4}}>{item.sub}</p>
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* When no SPF needed: add a brief note card to fill visual space */}
+            {pa.spfCase==='none' && (
+              <div style={{ background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:'12px',padding:'14px 16px' }}>
+                <p style={{ fontSize:'12px',fontWeight:600,color:'#166534',textTransform:'uppercase',letterSpacing:'0.06em',margin:'0 0 6px' }}>Good to Know</p>
+                <p style={{ fontSize:'13px',color:'#166534',lineHeight:1.6,margin:0 }}>UV conditions can change rapidly throughout the day. Check back when heading outdoors and consider applying SPF 30+ if you plan to be outside for more than 30 minutes.</p>
               </div>
             )}
           </div>
@@ -403,7 +398,9 @@ export default function Detail() {
           {/* Suggested Outfit */}
           <div style={card}>
             <p style={cardLabel}>👕 Suggested Outfit</p>
-            <div style={{borderRadius:'14px',background:'#fff1f2',border:'1px solid #fecdd3',padding:'18px 20px',marginBottom:'16px'}}>
+
+            {/* Outfit description */}
+            <div style={{borderRadius:'14px',background:'#fff1f2',border:'1px solid #fecdd3',padding:'18px 20px',marginBottom:'14px'}}>
               <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'10px',flexWrap:'wrap',marginBottom:'10px'}}>
                 <h3 style={{fontSize:'17px',fontWeight:700,color:'#9f1239',margin:0}}>{data.outfitAdvice.title}</h3>
                 <div style={{display:'flex',flexWrap:'wrap',gap:'5px'}}>
@@ -413,20 +410,43 @@ export default function Detail() {
               <p style={{fontSize:'14px',color:'#881337',lineHeight:1.75,margin:0}}>{data.outfitAdvice.description}</p>
             </div>
 
-            {/* Checklist */}
-            <div style={{ background:'#f9fafb',border:'1px solid #e5e7eb',borderRadius:'12px',padding:'14px 16px' }}>
-              <p style={{ fontSize:'12px',fontWeight:600,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.06em',margin:'0 0 12px' }}>Sun-Smart Daily Checklist</p>
-              {[
-                { icon:'🕶️', label:'Sunglasses (UV400 rated)' },
-                { icon:'👒', label:'Broad-brim hat (>7.5 cm brim)' },
-                { icon:'🧴', label: data.spf > 0 ? `SPF ${data.spf}+ applied to exposed skin` : 'UV low — no SPF required today' },
-                { icon:'👕', label:'UPF 50+ clothing for long outdoor exposure' },
-              ].map((item,i) => (
-                <div key={i} style={{ display:'flex',alignItems:'center',gap:'10px',marginBottom: i < 3 ? '8px' : 0 }}>
-                  <span style={{ fontSize:'16px' }}>{item.icon}</span>
-                  <span style={{ fontSize:'14px',color:'#44403c' }}>{item.label}</span>
-                </div>
-              ))}
+            {/* Gear guide — 2×2 grid of equipment cards, no icons */}
+            <div style={{ background:'#f9fafb',border:'1px solid #e5e7eb',borderRadius:'12px',padding:'16px 18px' }}>
+              <p style={{ fontSize:'12px',fontWeight:600,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.06em',margin:'0 0 12px' }}>Sun Protection Gear</p>
+              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px' }}>
+                {[
+                  {
+                    name: 'Wide-Brim Hat',
+                    detail: 'Brim ≥ 7.5 cm to shade face, neck and ears. Tightly woven fabric offers the best UV block.',
+                    uvReduction: 'Reduces face UV by ~50%',
+                    bg: '#fffbeb', border: '#fde68a', nameColor: '#92400e', detailColor: '#78350f', tagBg: '#fef9c3', tagColor: '#854d0e',
+                  },
+                  {
+                    name: 'UV Sunglasses',
+                    detail: 'Look for UV400 or 100% UVA/UVB blocking lenses. Wrap-around frames reduce side exposure.',
+                    uvReduction: 'Blocks up to 99% of UV to eyes',
+                    bg: '#eff6ff', border: '#bfdbfe', nameColor: '#1e40af', detailColor: '#1e3a8a', tagBg: '#dbeafe', tagColor: '#1d4ed8',
+                  },
+                  {
+                    name: 'Sun-Protective Clothing',
+                    detail: 'UPF 50+ rated fabrics. Long sleeves and full-length pants give the most coverage outdoors.',
+                    uvReduction: 'UPF 50+ blocks 98% of UV',
+                    bg: '#f0fdf4', border: '#bbf7d0', nameColor: '#166534', detailColor: '#14532d', tagBg: '#dcfce7', tagColor: '#15803d',
+                  },
+                  {
+                    name: 'Umbrella / Shade',
+                    detail: 'A dark-coloured, tightly woven umbrella blocks most UV. Seek natural shade between 10am–4pm.',
+                    uvReduction: 'Reduces UV exposure by ~30–50%',
+                    bg: '#fdf4ff', border: '#e9d5ff', nameColor: '#7e22ce', detailColor: '#6b21a8', tagBg: '#f3e8ff', tagColor: '#7c3aed',
+                  },
+                ].map((gear,i) => (
+                  <div key={i} style={{background:gear.bg,border:`1px solid ${gear.border}`,borderRadius:'10px',padding:'12px 14px',display:'flex',flexDirection:'column',gap:'6px'}}>
+                    <p style={{fontSize:'14px',fontWeight:700,color:gear.nameColor,margin:0}}>{gear.name}</p>
+                    <p style={{fontSize:'12px',color:gear.detailColor,lineHeight:1.55,margin:0,flexGrow:1}}>{gear.detail}</p>
+                    <span style={{fontSize:'10px',fontWeight:600,color:gear.tagColor,background:gear.tagBg,padding:'2px 8px',borderRadius:'999px',alignSelf:'flex-start',marginTop:'2px'}}>{gear.uvReduction}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

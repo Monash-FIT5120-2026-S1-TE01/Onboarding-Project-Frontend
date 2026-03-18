@@ -389,7 +389,7 @@ export default function Home() {
             <p style={cardLabel}>🛡 Safe Sun Time</p>
             {Math.round(data.uvIndex) === 0 ? (
               <>
-                <p style={{ fontSize:'48px',fontWeight:700,color:'#4eb400',margin:'0 0 6px',lineHeight:1 }}>Unlimited ✓</p>
+                <p style={{ fontSize:'48px',fontWeight:700,color:'#4eb400',margin:'0 0 6px',lineHeight:1 }}>Unlimited</p>
                 <p style={{ fontSize:'14px',color:'#4eb400',fontWeight:500,lineHeight:1.5,margin:'0 0 10px' }}>UV is zero — enjoy the outdoors safely!</p>
                 <p style={{ fontSize:'14px',color:'#9ca3af',lineHeight:1.6 }}>Even when UV is zero, stay hydrated and wear sunglasses for eye protection on bright days.</p>
               </>
@@ -406,7 +406,7 @@ export default function Home() {
         {/* Row 3: 3 Tip Cards */}
         <div className="hp-3col">
           {[
-            { icon:'🧴', title:'Apply SPF 50+', desc:'Use broad-spectrum sunscreen 20 minutes before going outdoors. Reapply every 2 hours, and after swimming or sweating, to maintain consistent protection.' },
+            { icon:'🧴', title:'Importance of Sunscreen', desc:'Use broad-spectrum sunscreen 20 minutes before going outdoors. Reapply every 2 hours, and after swimming or sweating, to maintain consistent protection.' },
             { icon:'👒', title:'Cover Up',       desc:'Wear a broad-brim hat, UV-protective sunglasses, and lightweight long-sleeved clothing. UPF 50+ fabrics block over 98% of UV radiation reaching your skin.' },
             { icon:'🌳', title:'Seek Shade',     desc:'Stay under shade between 10am–4pm when UV peaks. Note that UV can still reach you indirectly from reflected surfaces like water, sand and concrete.' },
           ].map((tip,i) => (
