@@ -275,8 +275,20 @@ export default function Home() {
         }
         @keyframes pulse-ring {
           0%   { box-shadow: 0 0 0 0 rgba(249,115,22,0.55); }
-          70%  { box-shadow: 0 0 0 10px rgba(249,115,22,0); }
+          70%  { box-shadow: 0 0 0 12px rgba(249,115,22,0); }
           100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); }
+        }
+        @keyframes pulse-ring-red {
+          0%   { box-shadow: 0 0 0 0 rgba(220,38,38,0.6); }
+          70%  { box-shadow: 0 0 0 12px rgba(220,38,38,0); }
+          100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+        }
+        @keyframes btn-shake {
+          0%, 100% { transform: translateX(0); }
+          20%       { transform: translateX(-5px); }
+          40%       { transform: translateX(5px); }
+          60%       { transform: translateX(-4px); }
+          80%       { transform: translateX(4px); }
         }
         .home-grid {
           display: grid;
@@ -426,8 +438,10 @@ export default function Home() {
           {/* Reapply Reminder card */}
           <Card>
             <Label>⏱ REAPPLY REMINDER</Label>
+
             {lastApplied ? (
               <>
+                {/* Timer stats row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', margin: '12px 0 10px' }}>
                   <div>
                     <p style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '2px' }}>Last applied</p>
@@ -435,26 +449,104 @@ export default function Home() {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '2px' }}>Reapply in</p>
-                    <p style={{ fontSize: '28px', fontWeight: 700, color: isOverdue ? '#dc2626' : '#f97316' }}>{isOverdue ? 'Now!' : `${reapplyIn} min`}</p>
+                    <p style={{ fontSize: '28px', fontWeight: 700, color: isOverdue ? '#dc2626' : '#f97316' }}>
+                      {isOverdue ? 'Now!' : `${reapplyIn} min`}
+                    </p>
                   </div>
                 </div>
-                <div style={{ background: '#f3f4f6', borderRadius: '99px', height: '8px', marginBottom: '12px', overflow: 'hidden' }}>
+
+                {/* Progress bar */}
+                <div style={{ background: '#f3f4f6', borderRadius: '99px', height: '8px', marginBottom: '16px', overflow: 'hidden' }}>
                   <div style={{ width: `${progress * 100}%`, height: '100%', borderRadius: '99px', background: isOverdue ? '#dc2626' : almostTime ? '#f97316' : '#fcd34d', transition: 'width 1s linear' }} />
                 </div>
-                <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '14px' }}>
-                  {isOverdue ? '🔴 Overdue — please reapply now!' : almostTime ? '⚠️ Almost time to reapply' : 'SPF 30+ recommended every 2 hours outdoors'}
-                </p>
-                <button onClick={handleDone} style={{ background: 'linear-gradient(135deg, #f97316, #c2410c)', color: '#fff', border: 'none', borderRadius: '12px', padding: '13px', fontWeight: 700, fontSize: '15px', cursor: 'pointer', width: '100%', boxShadow: '0 4px 16px rgba(249,115,22,0.45)', animation: isOverdue ? 'pulse-ring 1.8s ease infinite' : 'none' }}>
-                  ✓ Done — I've Applied Sunscreen
+
+                {/* Status banner — changes by urgency */}
+                {isOverdue ? (
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>🚨</span>
+                    <p style={{ fontSize: '13px', color: '#dc2626', fontWeight: 600, margin: 0 }}>Overdue — reapply sunscreen now!</p>
+                  </div>
+                ) : almostTime ? (
+                  <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>⚠️</span>
+                    <p style={{ fontSize: '13px', color: '#92400e', fontWeight: 600, margin: 0 }}>Almost time — get your sunscreen ready</p>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '16px' }}>
+                    SPF 30+ recommended every 2 hours outdoors
+                  </p>
+                )}
+
+                {/* Done button — 3 visual states */}
+                <button
+                  onClick={handleDone}
+                  style={{
+                    width: '100%',
+                    padding: isOverdue ? '16px' : '14px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    background: isOverdue
+                      ? 'linear-gradient(135deg, #dc2626, #991b1b)'
+                      : 'linear-gradient(135deg, #f97316, #c2410c)',
+                    color: '#fff',
+                    fontSize: isOverdue ? '17px' : '15px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    letterSpacing: '0.02em',
+                    animation: isOverdue
+                      ? 'pulse-ring-red 1.4s ease infinite, btn-shake 2.5s ease infinite'
+                      : almostTime
+                      ? 'pulse-ring 1.8s ease infinite'
+                      : 'none',
+                    boxShadow: isOverdue
+                      ? '0 6px 20px rgba(220,38,38,0.5)'
+                      : '0 4px 16px rgba(249,115,22,0.4)',
+                    transition: 'transform 0.1s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
+                >
+                  {isOverdue ? '🚨 Reapply Now — I\'ve Done It' : '✓ Done — I\'ve Reapplied'}
                 </button>
               </>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0', gap: '16px' }}>
-                <p style={{ color: '#9ca3af', fontSize: '14px', textAlign: 'center', lineHeight: 1.6 }}>
-                  Tap below after applying sunscreen to start your 2-hour reminder
-                </p>
-                <button onClick={handleDone} style={{ background: 'linear-gradient(135deg, #f97316, #c2410c)', color: '#fff', border: 'none', borderRadius: '14px', padding: '15px 36px', fontWeight: 700, fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 16px rgba(249,115,22,0.45)', animation: 'pulse-ring 1.8s ease infinite', letterSpacing: '0.02em' }}>
-                  ☀ Just Applied Sunscreen
+              /* ── No record yet: first-time state ── */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                {/* Prominent instruction banner */}
+                <div style={{ background: 'linear-gradient(135deg, #fff7ed, #ffedd5)', border: '1px solid #fed7aa', borderRadius: '12px', padding: '16px 18px', margin: '12px 0 20px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <span style={{ fontSize: '24px', flexShrink: 0, marginTop: '2px' }}>🧴</span>
+                  <div>
+                    <p style={{ fontSize: '14px', fontWeight: 700, color: '#9a3412', margin: '0 0 4px' }}>
+                      Applied sunscreen? Tap to start your reminder
+                    </p>
+                    <p style={{ fontSize: '12px', color: '#b45309', margin: 0, lineHeight: 1.5 }}>
+                      SunGuard will alert you when it's time to reapply — every 2 hours for maximum protection.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Large prominent button */}
+                <button
+                  onClick={handleDone}
+                  style={{
+                    width: '100%',
+                    padding: '18px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #f97316, #c2410c)',
+                    color: '#fff',
+                    fontSize: '17px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    letterSpacing: '0.02em',
+                    boxShadow: '0 6px 24px rgba(249,115,22,0.50)',
+                    animation: 'pulse-ring 1.8s ease infinite',
+                    transition: 'transform 0.1s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
+                >
+                  ☀️ I've Applied Sunscreen
                 </button>
               </div>
             )}
