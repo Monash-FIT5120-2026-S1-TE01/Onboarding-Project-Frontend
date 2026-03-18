@@ -1,3 +1,4 @@
+import { PageSpinner, PageError } from '../components/PageStatus'
 import { useState, useEffect, useCallback, useRef } from 'react'
 
 // ── City whitelist (for timezone lookup) ─────────────────────
@@ -320,29 +321,9 @@ export default function Home() {
   }, [])
 
   // ── Loading / Error states ────────────────────────────────────
-  if (loading) return (
-    <div style={{
-      minHeight: '100vh', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', background: '#f9fafb'
-    }}>
-      <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: '40px', marginBottom: '12px' }}>☀️</p>
-        <p style={{ fontSize: '14px', color: '#9ca3af' }}>Loading UV data...</p>
-      </div>
-    </div>
-  )
+  if (loading) return <PageSpinner label="Loading UV data..." />
 
-  if (error) return (
-    <div style={{
-      minHeight: '100vh', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', background: '#f9fafb'
-    }}>
-      <div style={{ textAlign: 'center', maxWidth: '320px', padding: '0 24px' }}>
-        <p style={{ fontSize: '40px', marginBottom: '12px' }}>⚠️</p>
-        <p style={{ fontSize: '14px', color: '#ef4444', lineHeight: 1.6 }}>{error}</p>
-      </div>
-    </div>
-  )
+  if (error) return <PageError message={error} />
 
   // ── Derived values ────────────────────────────────────────────
   // eslint-disable-next-line react-hooks/purity

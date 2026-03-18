@@ -1,3 +1,4 @@
+import { PageSpinner, PageError } from '../components/PageStatus'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 
 // ── City whitelist ────────────────────────────────────────────
@@ -485,23 +486,9 @@ export default function Detail() {
 
   const chart = useMemo(() => buildChartGeometry(data?.uvTrend ?? []), [data?.uvTrend])
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb' }}>
-      <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: '40px', marginBottom: '12px' }}>☀️</p>
-        <p style={{ fontSize: '14px', color: '#9ca3af' }}>Loading detail data...</p>
-      </div>
-    </div>
-  )
+  if (loading) return <PageSpinner label="Loading UV data..." />
 
-  if (error || !data) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb' }}>
-      <div style={{ textAlign: 'center', maxWidth: '320px', padding: '0 24px' }}>
-        <p style={{ fontSize: '40px', marginBottom: '12px' }}>⚠️</p>
-        <p style={{ fontSize: '14px', color: '#ef4444', lineHeight: 1.6 }}>{error ?? 'Unable to load page data.'}</p>
-      </div>
-    </div>
-  )
+  if (error || !data) return <PageError message={error ?? 'Unable to load page data.'} />
 
   const theme     = getUVTheme(data.currentUV)
   const weather   = getWeatherInfo(data.weatherLabel)
