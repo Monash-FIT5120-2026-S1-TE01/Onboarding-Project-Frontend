@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import Footer from '../components/Footer'
 
 const SUPPORTED_CITIES = [
   { name: 'Melbourne',      timezone: 'Australia/Melbourne' },
@@ -493,6 +494,10 @@ export default function Detail() {
           Outfit and sun protection suggestions are based on the World Health Organization (WHO) Ultraviolet Index (UVI).
         </p>
       </div>
+
+      {/* ── Footer ── */}
+      <Footer />
+
     </div>
   )
 }

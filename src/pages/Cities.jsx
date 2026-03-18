@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import Footer from '../components/Footer'
 
 const SUPPORTED_CITIES = [
   { name: 'Melbourne',      timezone: 'Australia/Melbourne', lat: -37.8136, lng: 144.9631 },
@@ -420,6 +421,10 @@ export default function Cities() {
           <button onClick={() => navigate('/detail')} style={{ fontSize: '12px', fontWeight: 600, color: '#f97316', background: 'none', border: 'none', cursor: 'pointer', padding: '0', textDecoration: 'underline' }}>UV Detail</button>
         </div>
       </div>
+
+      {/* ── Footer ── */}
+      <Footer />
+
     </div>
   )
 }

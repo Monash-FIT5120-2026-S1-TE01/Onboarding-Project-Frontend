@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import Footer from '../components/Footer'
 
 const SUPPORTED_CITIES = [
   { name: 'Melbourne',      timezone: 'Australia/Melbourne' },
@@ -592,6 +593,10 @@ export default function Home() {
         </div>
 
       </div>
+
+      {/* ── Footer ── */}
+      <Footer />
+
     </div>
   )
 }
